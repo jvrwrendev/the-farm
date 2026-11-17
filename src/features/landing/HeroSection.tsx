@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { Calendar, Bed, Tag, CalendarCheck2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { HERO_BACKGROUND_URL } from '@/features/landing/mockContent'
 import { getAccommodation } from '@/services/accommodation.service'
 import { queryKeys } from '@/lib/queryKeys'
@@ -11,7 +12,7 @@ import { DEFAULT_PRICE_PER_NIGHT } from '@/lib/constants'
 import { BRAND_NAME } from '@/lib/brand'
 
 export function HeroSection() {
-  const { data: accommodation } = useQuery({
+  const { data: accommodation, isLoading } = useQuery({
     queryKey: queryKeys.accommodation,
     queryFn: getAccommodation,
   })
@@ -77,7 +78,7 @@ export function HeroSection() {
               <span className="text-sm font-medium text-white/85">
                 Exclusive Resort Accommodation
               </span>
-              <span className="font-display text-2xl font-bold text-white">{formatCurrency(price)}</span>
+              {isLoading ? <Skeleton className="h-7 w-24 bg-white/20" /> : <span className="font-display text-2xl font-bold text-white">{formatCurrency(price)}</span>}
               <span className="text-sm text-white/75">/ night</span>
             </motion.div>
 

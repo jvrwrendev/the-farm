@@ -39,7 +39,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { PageHeading, StatusBadge } from '@/features/admin/components'
-import AdminManualBookingDialog from '@/features/admin/AdminManualBookingDialog'
+
 import { PaymentDetailsCard, PaymentStatusBadge } from '@/features/admin/PaymentDetailsCard'
 import { getBookings, type BookingFilters } from '@/services/admin.service'
 import { listPickleballBookings } from '@/services/pickleballBooking.service'
@@ -113,7 +113,6 @@ export default function AdminBookingsPage() {
   const [to, setTo] = useState('')
 
   const [paymentTarget, setPaymentTarget] = useState<{ type: PaymentBookingType; reference: string; total: number; status: string } | null>(null)
-  const [manualOpen, setManualOpen] = useState(false)
 
   // Resort (accommodation)
   const resortFilters: BookingFilters = { search, status: status as BookingFilters['status'], bookingType: 'all', from: from || undefined, to: to || undefined }
@@ -401,7 +400,7 @@ export default function AdminBookingsPage() {
       <PageHeading
         title="Bookings"
         description="All resort, pickleball, ATV, and billiards reservations in one place."
-        action={<Button onClick={() => setManualOpen(true)}>Create manual booking</Button>}
+        action={<Button onClick={() => navigate('/admin/bookings/new')}>Create manual booking</Button>}
       />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="space-y-4">
@@ -478,8 +477,6 @@ export default function AdminBookingsPage() {
         {renderTable(activeTab)}
       </TabsContent>
       </Tabs>
-
-      <AdminManualBookingDialog open={manualOpen} onOpenChange={setManualOpen} />
 
       <Dialog open={!!paymentTarget} onOpenChange={(o) => !o && setPaymentTarget(null)}>
         <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
