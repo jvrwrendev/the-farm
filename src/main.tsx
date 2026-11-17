@@ -16,12 +16,14 @@ import PickleballConfirmationPage from '@/features/pickleball/PickleballConfirma
 import AdminPickleballPage from '@/features/pickleball/admin/AdminPickleballPage'
 import AdminPickleballDetailsPage from '@/features/pickleball/admin/AdminPickleballDetailsPage'
 import AdminPickleballCourtsPage from '@/features/admin/AdminPickleballCourtsPage'
+import AdminPickleballCourtFormPage from '@/features/admin/AdminPickleballCourtFormPage'
 import AdminActivitiesPage from '@/features/admin/AdminActivitiesPage'
 import ActivityBookingPage from '@/features/activities/ActivityBookingPage'
 import ActivityConfirmationPage from '@/features/activities/ActivityConfirmationPage'
 import AdminLoginPage from '@/features/admin/AdminLoginPage'
 import AdminDashboardPage from '@/features/admin/AdminDashboardPage'
 import AdminBookingsPage from '@/features/admin/AdminBookingsPage'
+import AdminManualBookingPage from '@/features/admin/AdminManualBookingPage'
 import AdminBookingDetailPage from '@/features/admin/AdminBookingDetailPage'
 import AdminBookingDetailsPage from '@/features/admin/AdminBookingDetailsPage'
 import AdminCreateBookingPage from '@/features/admin/AdminCreateBookingPage'
@@ -161,6 +163,14 @@ createRoot(document.getElementById('root')!).render(
                 }
               />
               <Route
+                path="/admin/bookings/manual/:category"
+                element={
+                  <AdminRoute title="Manual booking">
+                    <AdminManualBookingPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
                 path="/admin/pickleball"
                 element={
                   <AdminRoute title="Pickleball Bookings">
@@ -181,6 +191,22 @@ createRoot(document.getElementById('root')!).render(
                 element={
                   <AdminRoute title="Pickleball Courts">
                     <AdminPickleballCourtsPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/pickleball-courts/new"
+                element={
+                  <AdminRoute title="Add Court">
+                    <AdminPickleballCourtFormPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/pickleball-courts/edit/:courtId"
+                element={
+                  <AdminRoute title="Edit Court">
+                    <AdminPickleballCourtFormPage />
                   </AdminRoute>
                 }
               />

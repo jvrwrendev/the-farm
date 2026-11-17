@@ -39,7 +39,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { PageHeading, StatusBadge } from '@/features/admin/components'
-
+import AdminManualBookingDialog from '@/features/admin/AdminManualBookingDialog'
 import { PaymentDetailsCard, PaymentStatusBadge } from '@/features/admin/PaymentDetailsCard'
 import { getBookings, type BookingFilters } from '@/services/admin.service'
 import { listPickleballBookings } from '@/services/pickleballBooking.service'
@@ -113,6 +113,8 @@ export default function AdminBookingsPage() {
   const [to, setTo] = useState('')
 
   const [paymentTarget, setPaymentTarget] = useState<{ type: PaymentBookingType; reference: string; total: number; status: string } | null>(null)
+  const [manualOpen, setManualOpen] = useState(false)
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
 
   // Resort (accommodation)
   const resortFilters: BookingFilters = { search, status: status as BookingFilters['status'], bookingType: 'all', from: from || undefined, to: to || undefined }
@@ -400,7 +402,7 @@ export default function AdminBookingsPage() {
       <PageHeading
         title="Bookings"
         description="All resort, pickleball, ATV, and billiards reservations in one place."
-        action={<Button onClick={() => navigate('/admin/bookings/new')}>Create manual booking</Button>}
+        action={<Button onClick={() => setCategoryModalOpen(true)}>Create manual booking</Button>}
       />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="space-y-4">
@@ -477,6 +479,37 @@ export default function AdminBookingsPage() {
         {renderTable(activeTab)}
       </TabsContent>
       </Tabs>
+
+      <AdminManualBookingDialog open={manualOpen} onOpenChange={setManualOpen} />
+
+      <Dialog open={categoryModalOpen} onOpenChange={setCategoryModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select booking category</DialogTitle>
+            <DialogDescription>Choose the type of manual booking to create.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: 'resort', label: 'Accommodation' },
+              { value: 'pickleball', label: 'Pickleball' },
+              { value: 'billiards', label: 'Billiards' },
+              { value: 'atv', label: 'ATV Rental' },
+            ].map((c) => (
+              <Button
+                key={c.value}
+                variant="outline"
+                className="h-20 flex-col gap-1"
+                onClick={() => {
+                  setCategoryModalOpen(false)
+                  navigate(`/admin/bookings/manual/${c.value}`)
+                }}
+              >
+                <span className="font-semibold">{c.label}</span>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!paymentTarget} onOpenChange={(o) => !o && setPaymentTarget(null)}>
         <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">

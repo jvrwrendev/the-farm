@@ -235,7 +235,7 @@ body{margin:0;padding:0;background:${cream};font-family:Arial,Helvetica,sans-ser
 <h2 class="h2">Instructions</h2>
 <p style="font-size:14px;line-height:1.5">${escapeHtml(d.instructions)}</p>
 <p style="font-size:14px;line-height:1.5">Present your booking reference at the front desk upon arrival. For questions, contact us.</p>
-${APP_URL ? `<a class="btn" href="${APP_URL.includes('@') ? 'mailto:' + APP_URL : APP_URL}">View booking</a>` : ''}
+${APP_URL ? `<a class="btn" href="${APP_URL}">View booking</a>` : ''}
 </div>
 <div class="footer">
 <p>${escapeHtml('The Farm Resort')} · ${escapeHtml(contactLine())}</p>

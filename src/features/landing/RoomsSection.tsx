@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { BedDouble, Check, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { getAccommodation } from '@/services/accommodation.service'
 import { listActiveAccommodationImages } from '@/services/accommodationImage.service'
 import { queryKeys } from '@/lib/queryKeys'
@@ -13,7 +12,7 @@ import { DEFAULT_ACCOMMODATION_IMAGES } from '@/lib/images'
 import { DEFAULT_MAX_GUESTS, DEFAULT_PRICE_PER_NIGHT } from '@/lib/constants'
 
 export function RoomsSection() {
-  const { data: accommodation, isLoading: accommodationLoading } = useQuery({
+  const { data: accommodation } = useQuery({
     queryKey: queryKeys.accommodation,
     queryFn: getAccommodation,
   })
@@ -63,9 +62,7 @@ export function RoomsSection() {
             transition={{ duration: 0.6 }}
             className="space-y-4"
           >
-            {accommodationLoading ? (
-              <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
-            ) : images.length === 0 ? (
+            {images.length === 0 ? (
               <div className="rounded-2xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
                 No accommodation images uploaded yet.
               </div>
@@ -76,8 +73,6 @@ export function RoomsSection() {
                     src={images[activeImage]}
                     alt={accommodation?.name ?? 'Exclusive Resort Accommodation'}
                     className="h-full w-full object-cover"
-                    loading="lazy"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="14">Image unavailable</text></svg>' } }
                   />
                   <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm">
                     <BedDouble className="h-3.5 w-3.5" />
@@ -110,17 +105,13 @@ export function RoomsSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            {accommodationLoading ? <Skeleton className="h-8 w-2/3" /> : (
-              <h3 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
-                {accommodation?.name ?? 'Exclusive Resort Accommodation'}
-              </h3>
-            )}
-            {accommodationLoading ? <Skeleton className="mt-4 h-16 w-full" /> : (
-              <p className="mt-4 leading-relaxed text-muted-foreground">
-                {accommodation?.description ??
-                  'A private resort escape for your group, complete with comfortable rooms, open grounds, and full amenities.'}
-              </p>
-            )}
+            <h3 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+              {accommodation?.name ?? 'Exclusive Resort Accommodation'}
+            </h3>
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              {accommodation?.description ??
+                'A private resort escape for your group, complete with comfortable rooms, open grounds, and full amenities.'}
+            </p>
 
             <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground">
               <Users className="h-4 w-4" />

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useImperativeHandle, forwardRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { User, Calendar, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,6 +47,21 @@ type Category = 'resort' | 'pickleball' | 'atv' | 'billiards'
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialCategory?: Category
+  asPage?: boolean
+  onSummaryChange?: (summary: {
+    category: Category
+    customerName: string
+    email: string
+    checkIn: string
+    checkOut: string
+    pbDate: string
+    pbStart: string
+    pbEnd: string
+    actDate: string
+    actStart: string
+    actDuration: string
+  }) => void
 }
 
 const CATEGORIES: { value: Category; label: string }[] = [
@@ -55,9 +71,12 @@ const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'billiards', label: 'Billiards' },
 ]
 
-export default function AdminManualBookingDialog({ open, onOpenChange }: Props) {
+const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(function AdminManualBookingDialog({ open, onOpenChange, initialCategory, asPage = false, onSummaryChange }, ref) {
   const queryClient = useQueryClient()
-  const [category, setCategory] = useState<Category>('resort')
+  const [category, setCategory] = useState<Category>(initialCategory ?? 'resort')
+  useEffect(() => {
+    if (initialCategory) setCategory(initialCategory)
+  }, [initialCategory])
 
   // Common customer fields
   const [customerName, setCustomerName] = useState('')
@@ -110,6 +129,23 @@ export default function AdminManualBookingDialog({ open, onOpenChange }: Props) 
   const [actDate, setActDate] = useState('')
   const [actStart, setActStart] = useState('')
   const [actDuration, setActDuration] = useState('1')
+
+  useEffect(() => {
+    onSummaryChange?.({
+      category,
+      customerName,
+      email,
+      checkIn,
+      checkOut,
+      pbDate,
+      pbStart,
+      pbEnd,
+      actDate,
+      actStart,
+      actDuration,
+    })
+  }, [category, customerName, email, checkIn, checkOut, pbDate, pbStart, pbEnd, actDate, actStart, actDuration, onSummaryChange])
+
   const [actPlayers, setActPlayers] = useState('2')
 
   const { data: activityBookingsForDate = [] } = useQuery({
@@ -229,6 +265,8 @@ export default function AdminManualBookingDialog({ open, onOpenChange }: Props) 
     },
   })
 
+  useImperativeHandle(ref, () => ({ submit: () => mutation.mutate() }), [mutation])
+
   const resetForm = () => {
     setCustomerName('')
     setEmail('')
@@ -248,16 +286,51 @@ export default function AdminManualBookingDialog({ open, onOpenChange }: Props) 
     setActPlayers('2')
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+  const LABELS: Record<Category, string> = {
+    resort: 'Resort Accommodation',
+    pickleball: 'Pickleball',
+    atv: 'ATV Rental',
+    billiards: 'Billiards',
+  }
+
+  const body = (
+    <div className="space-y-8">
+      {!asPage && (
         <DialogHeader>
           <DialogTitle>Create Manual Booking</DialogTitle>
           <DialogDescription>Create a reservation on behalf of a customer. Source will be marked as Manual.</DialogDescription>
         </DialogHeader>
+      )}
 
-        <div className="space-y-4">
-          <div className="space-y-2">
+      <section className="rounded-xl border bg-card/50 p-5">
+        <div className="mb-4 flex items-center gap-2 border-b pb-3">
+          <User className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-lg font-semibold">Customer details</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="customerName">Customer name <span className="text-destructive">*</span></Label>
+            <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Juan Dela Cruz" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="guest@example.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">Phone</Label>
+            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0917 123 4567" />
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card/50 p-5">
+        <div className="mb-4 flex items-center gap-2 border-b pb-3">
+          <Calendar className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-lg font-semibold">Booking details — {LABELS[category]}</h2>
+        </div>
+
+        {!asPage && (
+          <div className="mb-5 space-y-1.5">
             <Label>Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -268,138 +341,124 @@ export default function AdminManualBookingDialog({ open, onOpenChange }: Props) 
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Customer name *</Label>
-              <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+        {category === 'resort' && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label>Check-in date <span className="text-destructive">*</span></Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" className="w-full justify-start font-normal">
+                    {checkIn || 'Select check-in date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <BookingCalendar
+                    events={resortEvents}
+                    onDateSelect={(date) => {
+                      setCheckIn(format(date, 'yyyy-MM-dd'))
+                      setResortSelectedDate(date)
+                    }}
+                    selectedDate={checkIn ? new Date(checkIn) : null}
+                    showGuestInfo={false}
+                    showLegend={false}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-            <div className="space-y-2">
-              <Label>Email *</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <div className="space-y-1.5">
+              <Label>Check-out date <span className="text-destructive">*</span></Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" className="w-full justify-start font-normal">
+                    {checkOut || 'Select check-out date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <BookingCalendar
+                    events={resortEvents}
+                    onDateSelect={(date) => {
+                      const d = format(date, 'yyyy-MM-dd')
+                      if (checkIn && d <= checkIn) {
+                        toast.error('Check-out must be after check-in.')
+                        return
+                      }
+                      setCheckOut(d)
+                    }}
+                    selectedDate={checkOut ? new Date(checkOut) : null}
+                    showGuestInfo={false}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <div className="space-y-1.5">
+              <Label>Check-in period</Label>
+              <Select value={checkInPeriod} onValueChange={(v) => setCheckInPeriod(v as 'AM' | 'PM')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AM">AM</SelectItem>
+                  <SelectItem value="PM">PM</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        )}
 
-          {category === 'resort' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Check-in date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="outline" className="w-full justify-start">
-                        {checkIn || 'Select check-in date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <BookingCalendar
-                        events={resortEvents}
-                        onDateSelect={(date) => {
-                          setCheckIn(format(date, 'yyyy-MM-dd'))
-                          setResortSelectedDate(date)
-                        }}
-                        selectedDate={checkIn ? new Date(checkIn) : null}
-                        showGuestInfo={false}
-                        showLegend={false}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label>Check-in period</Label>
-                  <Select value={checkInPeriod} onValueChange={(v) => setCheckInPeriod(v as 'AM' | 'PM')}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
-                      <SelectItem value="PM">PM</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Check-out date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="outline" className="w-full justify-start">
-                        {checkOut || 'Select check-out date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <BookingCalendar
-                        events={resortEvents}
-                        onDateSelect={(date) => {
-                          const d = format(date, 'yyyy-MM-dd')
-                          if (checkIn && d <= checkIn) {
-                            toast.error('Check-out must be after check-in.')
-                            return
-                          }
-                          setCheckOut(d)
-                        }}
-                        selectedDate={checkOut ? new Date(checkOut) : null}
-                        showGuestInfo={false}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+        {category === 'pickleball' && (
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <Label>Court <span className="text-destructive">*</span></Label>
+              <Select value={courtId} onValueChange={setCourtId}>
+                <SelectTrigger><SelectValue placeholder="Select court" /></SelectTrigger>
+                <SelectContent>
+                  {courts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>Date <span className="text-destructive">*</span></Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" className="w-full justify-start font-normal">
+                      {pbDate || 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <PickleballAvailabilityCalendar compact onDateSelect={(d) => setPbDate(format(d, 'yyyy-MM-dd'))} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Start time <span className="text-destructive">*</span></Label>
+                <TimePicker12h value={pbStart} onChange={setPbStart} minTime={pbDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>End time <span className="text-destructive">*</span></Label>
+                <TimePicker12h value={pbEnd} onChange={setPbEnd} minTime={pbDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} />
+                {pickleballOccupied.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Occupied: {pickleballOccupied.map((s) => `${formatPickleballTime(s.startTime)} – ${formatPickleballTime(s.endTime)}`).join(', ')}
+                  </p>
+                )}
               </div>
             </div>
-          )}
-
-          {category === 'pickleball' && (
-            <>
-              <div className="space-y-2">
-                <Label>Court *</Label>
-                <Select value={courtId} onValueChange={setCourtId}>
-                  <SelectTrigger><SelectValue placeholder="Select court" /></SelectTrigger>
-                  <SelectContent>
-                    {courts.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="outline" className="w-full justify-start">
-                        {pbDate || 'Select date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <PickleballAvailabilityCalendar compact onDateSelect={(d) => setPbDate(format(d, 'yyyy-MM-dd'))} />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label>Start time *</Label>
-                  <Label>Start time *</Label>
-                  <TimePicker12h value={pbStart} onChange={setPbStart} minTime={pbDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} />
-                </div>
-                <div className="space-y-2">
-                  <Label>End time *</Label>
-                  <TimePicker12h value={pbEnd} onChange={setPbEnd} minTime={pbDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} />
-                  {pickleballOccupied.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Occupied: {pickleballOccupied.map((s) => `${formatPickleballTime(s.startTime)} – ${formatPickleballTime(s.endTime)}`).join(', ')}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
                 <Label>Players</Label>
                 <Input type="number" value={pbPlayers} onChange={(e) => setPbPlayers(e.target.value)} />
               </div>
-            </>
-          )}
+            </div>
+          </div>
+        )}
 
-          {category === 'atv' || category === 'billiards' ? (
-            <>
-              <div className="space-y-2">
+        {(category === 'atv' || category === 'billiards') && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
                 <Label>Activity type</Label>
                 <Select value={activityType} onValueChange={(v) => setActivityType(v as ActivityType)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -409,8 +468,8 @@ export default function AdminManualBookingDialog({ open, onOpenChange }: Props) 
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Unit / Table *</Label>
+              <div className="space-y-1.5">
+                <Label>Unit / Table <span className="text-destructive">*</span></Label>
                 <Select value={unitId} onValueChange={setUnitId}>
                   <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
                   <SelectContent>
@@ -420,63 +479,87 @@ export default function AdminManualBookingDialog({ open, onOpenChange }: Props) 
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="outline" className="w-full justify-start">
-                        {actDate || 'Select date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <ActivityAvailabilityCalendar compact onDateSelect={(d) => setActDate(format(d, 'yyyy-MM-dd'))} />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label>Start time *</Label>
-                  <TimePicker12h value={actStart} onChange={setActStart} minTime={actDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} />
-                  {activityBookingsForDate.filter((b: ActivityBooking) => b.unitId === unitId && b.bookingDate === actDate && ['pending','confirmed','checked_in','completed'].includes(b.status)).length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Occupied:{' '}
-                      {activityBookingsForDate
-                        .filter((b: ActivityBooking) => b.unitId === unitId && b.bookingDate === actDate && ['pending','confirmed','checked_in','completed'].includes(b.status))
-                        .map((b: ActivityBooking) => `${formatActivityTime(b.startTime)} – ${formatActivityTime(b.endTime)}`)
-                        .join(', ')}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Duration (hrs)</Label>
-                  <Select value={actDuration} onValueChange={setActDuration}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                        <SelectItem key={h} value={String(h)}>{h} hour{h === 1 ? '' : 's'}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>Date <span className="text-destructive">*</span></Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" className="w-full justify-start font-normal">
+                      {actDate || 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <ActivityAvailabilityCalendar compact onDateSelect={(d) => setActDate(format(d, 'yyyy-MM-dd'))} />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
+                <Label>Start time <span className="text-destructive">*</span></Label>
+                <TimePicker12h value={actStart} onChange={setActStart} minTime={actDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} />
+                {activityBookingsForDate.filter((b: ActivityBooking) => b.unitId === unitId && b.bookingDate === actDate && ['pending','confirmed','checked_in','completed'].includes(b.status)).length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Occupied:{' '}
+                    {activityBookingsForDate
+                      .filter((b: ActivityBooking) => b.unitId === unitId && b.bookingDate === actDate && ['pending','confirmed','checked_in','completed'].includes(b.status))
+                      .map((b: ActivityBooking) => `${formatActivityTime(b.startTime)} – ${formatActivityTime(b.endTime)}`)
+                      .join(', ')}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Duration (hrs)</Label>
+                <Select value={actDuration} onValueChange={setActDuration}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                      <SelectItem key={h} value={String(h)}>{h} hour{h === 1 ? '' : 's'}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
                 <Label>Players</Label>
                 <Input type="number" value={actPlayers} onChange={(e) => setActPlayers(e.target.value)} />
               </div>
-            </>
-          ) : null}
-
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
           </div>
+        )}
+      </section>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>Create booking</Button>
-          </div>
+      <section className="rounded-xl border bg-card/50 p-5">
+        <div className="mb-4 flex items-center gap-2 border-b pb-3">
+          <FileText className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-lg font-semibold">Additional notes</h2>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special requests, requests, or reminders…" />
+        </div>
+      </section>
+
+      {!asPage && (
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>Create booking</Button>
+        </div>
+      )}
+    </div>
+  )
+
+  if (asPage) {
+    return body
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        {body}
       </DialogContent>
     </Dialog>
   )
-}
+})
+
+export default AdminManualBookingDialog
