@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, KeyRound, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -97,9 +98,14 @@ export default function AdminLoginPage() {
   const handleForgot = async (event: FormEvent) => {
     event.preventDefault()
     setForgotError('')
+    const email = forgotEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setForgotError('Enter a valid email address.')
+      return
+    }
     setForgotSubmitting(true)
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/admin/login`,
       })
       if (resetError) throw resetError
@@ -114,8 +120,8 @@ export default function AdminLoginPage() {
   const handleRecovery = async (event: FormEvent) => {
     event.preventDefault()
     setRecoveryError('')
-    if (newPassword.length < 6) {
-      setRecoveryError('Password must be at least 6 characters.')
+    if (newPassword.length < 8) {
+      setRecoveryError('Password must be at least 8 characters.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -126,6 +132,8 @@ export default function AdminLoginPage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
       if (updateError) throw updateError
+      window.history.replaceState(null, '', window.location.pathname)
+      toast.success('Password updated. You are now signed in.')
       navigate('/admin/dashboard', { replace: true })
     } catch (err) {
       setRecoveryError(err instanceof Error ? err.message : 'Unable to update password.')
@@ -323,7 +331,7 @@ export default function AdminLoginPage() {
                 id="new-password"
                 type={showNewPassword ? 'text' : 'password'}
                 autoComplete="new-password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 className="pl-9 pr-10"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}

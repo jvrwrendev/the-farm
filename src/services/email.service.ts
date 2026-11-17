@@ -50,16 +50,55 @@ function rowToLog(r: LogRow): EmailLog {
   }
 }
 
+
 export async function sendBookingConfirmation(
   bookingType: 'accommodation' | 'pickleball' | 'billiards' | 'atv',
   reference: string,
 ): Promise<{ status: string; messageId?: string | null; error?: string }> {
-  const { data, error } = await supabase.functions.invoke('send-booking-confirmation', {
-    body: { bookingType, reference },
-  })
-  if (error) throw new Error(error.message ?? 'Failed to invoke email function.')
-  return data as { status: string; messageId?: string | null; error?: string }
+
+  // Get the logged-in administrator's session
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
+
+  if (sessionError || !session) {
+    throw new Error('Admin session not found. Please log in again.')
+  }
+
+  // Invoke the Edge Function with the admin access token
+  const { data, error } = await supabase.functions.invoke(
+    'send-booking-confirmation',
+    {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: {
+        bookingType,
+        reference,
+      },
+    },
+  )
+
+  if (error) {
+    let message = error.message ?? 'Failed to send confirmation email.'
+
+    if ('context' in error && error.context instanceof Response) {
+      const responseBody = await error.context.json().catch(() => null)
+      message = responseBody?.error ?? message
+    }
+
+    console.error('Booking confirmation error:', message)
+    throw new Error(message)
+  }
+
+  return data as {
+    status: string
+    messageId?: string | null
+    error?: string
+  }
 }
+
 
 export async function getEmailLog(
   bookingType: 'accommodation' | 'pickleball' | 'billiards' | 'atv',

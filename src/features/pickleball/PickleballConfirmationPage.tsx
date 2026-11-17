@@ -259,7 +259,7 @@ export default function PickleballConfirmationPage() {
                     </p>
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">
-                    A 50% GCash down payment is required to secure this reservation. Check your payment status below.
+                    A 50% GoTyme down payment is required to secure this reservation. Check your payment status below.
                   </p>
                 </section>
 

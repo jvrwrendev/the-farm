@@ -43,7 +43,7 @@ export function PaymentCheckout({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error('Please upload your GCash payment receipt.')
+      if (!file) throw new Error('Please upload your GoTyme payment receipt.')
       const receiptUrl = await uploadPaymentReceipt(file)
       return submitPayment({
         bookingType,
@@ -96,7 +96,7 @@ export function PaymentCheckout({
         <CardHeader>
           <CardTitle className="font-display text-xl">50% Down Payment Required</CardTitle>
           <p className="text-sm text-muted-foreground">
-            To secure your reservation ({bookingReference}), please pay the down payment via GCash
+            To secure your reservation ({bookingReference}), please pay the down payment via GoTyme
             and upload your receipt.
           </p>
         </CardHeader>
@@ -120,29 +120,29 @@ export function PaymentCheckout({
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <QrCode className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">Pay via GCash</h3>
+                <h3 className="font-semibold">Pay via GoTyme</h3>
               </div>
               <div className="flex flex-col items-center rounded-2xl border bg-white p-4">
-                {settings?.gcashQrUrl ? (
+                {settings?.gotymeQrUrl ? (
                   <img
-                    src={settings.gcashQrUrl}
-                    alt="GCash QR code"
+                    src={settings.gotymeQrUrl}
+                    alt="GoTyme QR code"
                     className="h-56 w-56 rounded-lg object-contain"
                   />
                 ) : (
                   <div className="flex h-56 w-56 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
                     <QrCode className="h-10 w-10" />
-                    <p className="text-center text-xs">GCash QR code not yet configured. Please contact the resort.</p>
+                    <p className="text-center text-xs">GoTyme QR code not yet configured. Please contact the resort.</p>
                   </div>
                 )}
               </div>
-              {(settings?.gcashAccountName || settings?.gcashNumber) && (
+              {(settings?.gotymeAccountName || settings?.gotymeNumber) && (
                 <div className="rounded-xl border bg-muted/30 p-4 text-sm">
-                  {settings.gcashAccountName && (
-                    <p><span className="text-muted-foreground">Account name:</span> <span className="font-medium">{settings.gcashAccountName}</span></p>
+                  {settings.gotymeAccountName && (
+                    <p><span className="text-muted-foreground">Account name:</span> <span className="font-medium">{settings.gotymeAccountName}</span></p>
                   )}
-                  {settings.gcashNumber && (
-                    <p className="mt-1"><span className="text-muted-foreground">GCash number:</span> <span className="font-medium">{settings.gcashNumber}</span></p>
+                  {settings.gotymeNumber && (
+                    <p className="mt-1"><span className="text-muted-foreground">GoTyme number:</span> <span className="font-medium">{settings.gotymeNumber}</span></p>
                   )}
                 </div>
               )}
@@ -186,7 +186,7 @@ export function PaymentCheckout({
                 >
                   <Upload className="h-8 w-8 text-muted-foreground" />
                   <div>
-                    <p className="font-medium text-foreground">Upload GCash receipt</p>
+                    <p className="font-medium text-foreground">Upload GoTyme receipt</p>
                     <p className="mt-1 text-xs text-muted-foreground">JPG, PNG, or WebP · max 2 MB</p>
                   </div>
                 </button>

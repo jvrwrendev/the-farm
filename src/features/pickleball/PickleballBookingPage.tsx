@@ -271,7 +271,7 @@ export default function PickleballBookingPage() {
               Book your pickleball session
             </h1>
             <p className="mt-4 text-muted-foreground">
-              Choose a court, pick an open hour, and tell us who’s playing. A 50% GCash down payment
+              Choose a court, pick an open hour, and tell us who’s playing. A 50% GoTyme down payment
               is required to secure your reservation.
             </p>
           </div>

@@ -79,14 +79,14 @@ export default function AdminPaymentsPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!form) throw new Error('Settings not loaded.')
-      let gcashQrUrl = form.gcashQrUrl
+      let gotymeQrUrl = form.gotymeQrUrl
       if (qrFile) {
-        gcashQrUrl = await uploadPaymentQr(qrFile)
+        gotymeQrUrl = await uploadPaymentQr(qrFile)
       }
-      return updatePaymentSettings({ ...form, gcashQrUrl })
+      return updatePaymentSettings({ ...form, gotymeQrUrl })
     },
     onSuccess: (updated) => {
-      toast.success('GCash payment settings saved.')
+      toast.success('GoTyme payment settings saved.')
       setForm(updated)
       setQrFile(null)
       setQrPreview('')
@@ -113,7 +113,7 @@ export default function AdminPaymentsPage() {
   const removeQr = () => {
     setQrFile(null)
     setQrPreview('')
-    setForm((prev) => (prev ? { ...prev, gcashQrUrl: '' } : prev))
+    setForm((prev) => (prev ? { ...prev, gotymeQrUrl: '' } : prev))
     if (qrRef.current) qrRef.current.value = ''
   }
 
@@ -124,12 +124,12 @@ export default function AdminPaymentsPage() {
     <div className="space-y-6">
       <PageHeading
         title="Payments"
-        description="Manage GCash settings and verify customer down payment receipts."
+        description="Manage GoTyme settings and verify customer down payment receipts."
       />
 
       <Tabs defaultValue="settings" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="settings">GCash Payment Settings</TabsTrigger>
+          <TabsTrigger value="settings">GoTyme Payment Settings</TabsTrigger>
           <TabsTrigger value="verifications">
             Payment Verifications
             {pending.length > 0 && (
@@ -142,10 +142,10 @@ export default function AdminPaymentsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display text-lg">
-                <QrCode className="h-5 w-5 text-primary" /> GCash Payment Settings
+                <QrCode className="h-5 w-5 text-primary" /> GoTyme Payment Settings
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Configure the GCash QR code and account details shown to customers during checkout.
+                Configure the GoTyme QR code and account details shown to customers during checkout.
               </p>
             </CardHeader>
             <CardContent>
@@ -156,12 +156,12 @@ export default function AdminPaymentsPage() {
               ) : (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px,1fr]">
                   <div className="space-y-3">
-                    <Label>GCash QR code</Label>
+                    <Label>GoTyme QR code</Label>
                     <div className="flex aspect-square w-full max-w-xs items-center justify-center overflow-hidden rounded-2xl border bg-white p-3">
-                      {qrPreview || form.gcashQrUrl ? (
+                      {qrPreview || form.gotymeQrUrl ? (
                         <img
-                          src={qrPreview || form.gcashQrUrl}
-                          alt="GCash QR code"
+                          src={qrPreview || form.gotymeQrUrl}
+                          alt="GoTyme QR code"
                           className="h-full w-full object-contain"
                         />
                       ) : (
@@ -184,9 +184,9 @@ export default function AdminPaymentsPage() {
                     />
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" variant="outline" onClick={() => qrRef.current?.click()}>
-                        <Upload className="h-4 w-4" /> {form.gcashQrUrl || qrPreview ? 'Replace QR' : 'Upload QR'}
+                        <Upload className="h-4 w-4" /> {form.gotymeQrUrl || qrPreview ? 'Replace QR' : 'Upload QR'}
                       </Button>
-                      {(form.gcashQrUrl || qrPreview) && (
+                      {(form.gotymeQrUrl || qrPreview) && (
                         <Button type="button" variant="ghost" onClick={removeQr}>Remove</Button>
                       )}
                     </div>
@@ -196,28 +196,28 @@ export default function AdminPaymentsPage() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="gcash-name">GCash account name</Label>
+                        <Label htmlFor="gotyme-name">GoTyme account name</Label>
                         <Input
-                          id="gcash-name"
-                          value={form.gcashAccountName}
-                          onChange={(e) => setForm((p) => (p ? { ...p, gcashAccountName: e.target.value } : p))}
+                          id="gotyme-name"
+                          value={form.gotymeAccountName}
+                          onChange={(e) => setForm((p) => (p ? { ...p, gotymeAccountName: e.target.value } : p))}
                           placeholder="The Farm Resort"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="gcash-number">GCash number</Label>
+                        <Label htmlFor="gotyme-number">GoTyme number</Label>
                         <Input
-                          id="gcash-number"
-                          value={form.gcashNumber}
-                          onChange={(e) => setForm((p) => (p ? { ...p, gcashNumber: e.target.value } : p))}
+                          id="gotyme-number"
+                          value={form.gotymeNumber}
+                          onChange={(e) => setForm((p) => (p ? { ...p, gotymeNumber: e.target.value } : p))}
                           placeholder="09XX XXX XXXX"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="gcash-instructions">Payment instructions</Label>
+                      <Label htmlFor="gotyme-instructions">Payment instructions</Label>
                       <Textarea
-                        id="gcash-instructions"
+                        id="gotyme-instructions"
                         rows={4}
                         value={form.instructions}
                         onChange={(e) => setForm((p) => (p ? { ...p, instructions: e.target.value } : p))}

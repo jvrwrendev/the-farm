@@ -135,7 +135,7 @@ export default function BookingPage() {
   }
 
   const onReceiptNext = async () => {
-    if (!receiptFile) { toast.error('Please upload your GCash payment receipt.'); return }
+    if (!receiptFile) { toast.error('Please upload your GoTyme payment receipt.'); return }
     setUploadingReceipt(true)
     try {
       const url = await uploadPaymentReceipt(receiptFile)
@@ -293,7 +293,7 @@ export default function BookingPage() {
             {step === 2 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-display text-xl">50% Down Payment (GCash)</CardTitle>
+                  <CardTitle className="font-display text-xl">50% Down Payment (GoTyme)</CardTitle>
                   <p className="text-sm text-muted-foreground">Scan the QR code, pay the 50% down payment, then upload your receipt.</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -306,11 +306,11 @@ export default function BookingPage() {
                       </div>
                       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <div className="space-y-3">
-                          <p className="text-sm font-semibold">GCash QR code</p>
-                          {paymentSettings?.gcashQrUrl ? <img src={paymentSettings.gcashQrUrl} alt="GCash QR" className="mx-auto max-h-64 rounded-xl border" /> : <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-muted-foreground"><QrCode className="h-8 w-8" /></div>}
+                          <p className="text-sm font-semibold">GoTyme QR code</p>
+                          {paymentSettings?.gotymeQrUrl ? <img src={paymentSettings.gotymeQrUrl} alt="GoTyme QR" className="mx-auto max-h-64 rounded-xl border" /> : <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-muted-foreground"><QrCode className="h-8 w-8" /></div>}
                           <div className="text-sm text-muted-foreground">
-                            <p><span className="font-medium text-foreground">Account name:</span> {paymentSettings?.gcashAccountName}</p>
-                            <p><span className="font-medium text-foreground">GCash number:</span> {paymentSettings?.gcashNumber}</p>
+                            <p><span className="font-medium text-foreground">Account name:</span> {paymentSettings?.gotymeAccountName}</p>
+                            <p><span className="font-medium text-foreground">GoTyme number:</span> {paymentSettings?.gotymeNumber}</p>
                             {paymentSettings?.instructions && <p className="mt-2">{paymentSettings.instructions}</p>}
                           </div>
                         </div>
@@ -397,7 +397,7 @@ export default function BookingPage() {
                 </div>
                 <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  A 50% GCash down payment is required to secure your reservation.
+                  A 50% GoTyme down payment is required to secure your reservation.
                 </div>
                 <Button variant="outline" className="w-full" asChild><Link to="/#calendar">Check availability calendar</Link></Button>
               </CardContent>

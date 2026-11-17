@@ -179,7 +179,7 @@ export function PaymentDetailsCard({
                   {formatCurrency(amountPaid)}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {amountPaid > 0 ? 'Verified GCash down payment' : 'No verified payment yet'}
+                  {amountPaid > 0 ? 'Verified GoTyme down payment' : 'No verified payment yet'}
                 </p>
               </div>
               <div className="rounded-xl border bg-muted/30 p-3">
@@ -200,7 +200,7 @@ export function PaymentDetailsCard({
             </div>
 
             <div className="space-y-2">
-              <Label>GCash receipt</Label>
+              <Label>GoTyme receipt</Label>
               {payment?.receiptUrl ? (
                 <Dialog>
                   <DialogTrigger asChild>
@@ -211,7 +211,7 @@ export function PaymentDetailsCard({
                     >
                       <img
                         src={payment.receiptUrl}
-                        alt={`GCash payment receipt for ${reference}`}
+                        alt={`GoTyme payment receipt for ${reference}`}
                         className="max-h-56 w-full object-contain"
                       />
                       <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 text-sm font-medium text-white opacity-0 transition group-hover:bg-black/50 group-hover:opacity-100">
@@ -230,7 +230,7 @@ export function PaymentDetailsCard({
                     <div className="flex items-center justify-center rounded-xl border bg-muted/20 p-2">
                       <img
                         src={payment.receiptUrl}
-                        alt={`Full-size GCash payment receipt for ${reference}`}
+                        alt={`Full-size GoTyme payment receipt for ${reference}`}
                         className="max-h-[70vh] w-auto max-w-full object-contain"
                       />
                     </div>
@@ -246,7 +246,7 @@ export function PaymentDetailsCard({
               ) : (
                 <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                   <Receipt className="mt-0.5 h-4 w-4 shrink-0" />
-                  No GCash receipt has been uploaded for this booking yet.
+                  No GoTyme receipt has been uploaded for this booking yet.
                 </div>
               )}
             </div>

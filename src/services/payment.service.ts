@@ -5,9 +5,9 @@ export type PaymentBookingType = 'accommodation' | 'pickleball' | 'billiards' | 
 export type PaymentRecordStatus = 'pending_verification' | 'verified' | 'rejected' | 'paid'
 
 export interface PaymentSettings {
-  gcashAccountName: string
-  gcashNumber: string
-  gcashQrUrl: string
+  gotymeAccountName: string
+  gotymeNumber: string
+  gotymeQrUrl: string
   instructions: string
 }
 
@@ -58,12 +58,12 @@ interface RecordRow {
 
 function rowToSettings(row: SettingsRow | null): PaymentSettings {
   return {
-    gcashAccountName: row?.gcash_account_name ?? '',
-    gcashNumber: row?.gcash_number ?? '',
-    gcashQrUrl: row?.gcash_qr_url ?? '',
+    gotymeAccountName: row?.gcash_account_name ?? '',
+    gotymeNumber: row?.gcash_number ?? '',
+    gotymeQrUrl: row?.gcash_qr_url ?? '',
     instructions:
       row?.instructions ??
-      'Scan the QR code and pay 50% of your total booking amount via GCash, then upload a screenshot of your receipt.',
+      'Scan the QR code and pay 50% of your total booking amount via GoTyme, then upload a screenshot of your receipt.',
   }
 }
 
@@ -95,17 +95,17 @@ export async function getPaymentSettings(): Promise<PaymentSettings> {
 }
 
 export async function updatePaymentSettings(input: {
-  gcashAccountName: string
-  gcashNumber: string
-  gcashQrUrl: string
+  gotymeAccountName: string
+  gotymeNumber: string
+  gotymeQrUrl: string
   instructions: string
 }): Promise<PaymentSettings> {
   const { data, error } = await supabase
     .from('payment_settings')
     .update({
-      gcash_account_name: input.gcashAccountName,
-      gcash_number: input.gcashNumber,
-      gcash_qr_url: input.gcashQrUrl || null,
+      gcash_account_name: input.gotymeAccountName,
+      gcash_number: input.gotymeNumber,
+      gcash_qr_url: input.gotymeQrUrl || null,
       instructions: input.instructions,
       updated_at: new Date().toISOString(),
     })

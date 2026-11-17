@@ -380,7 +380,7 @@ export default function ActivityBookingPage({
             </h1>
             <p className="mt-4 text-muted-foreground">
               Select your preferred {meta.unit}, pick a time, and we’ll prepare it for your visit.
-              A 50% GCash down payment is required to secure your reservation.
+              A 50% GoTyme down payment is required to secure your reservation.
             </p>
 
           </div>
@@ -727,7 +727,7 @@ export default function ActivityBookingPage({
                 </Card>
                 <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                  A 50% GCash down payment is required after confirming.
+                  A 50% GoTyme down payment is required after confirming.
                 </div>
               </div>
             </div>
@@ -779,20 +779,20 @@ export default function ActivityBookingPage({
               <div className="rounded-lg border bg-muted/30 p-2 text-center"><p className="text-muted-foreground">Remaining</p><p className="font-semibold">{formatCurrency(reviewRemaining)}</p></div>
             </div>
             <div className="mt-4 space-y-2">
-              <p className="text-sm font-semibold">GCash QR code</p>
+              <p className="text-sm font-semibold">GoTyme QR code</p>
               {settingsLoading ? <p className="text-xs text-muted-foreground">Loading…</p> : (
                 <>
-                  {paymentSettings?.gcashQrUrl ? <img src={paymentSettings.gcashQrUrl} alt="GCash QR" className="mx-auto max-h-40 rounded-xl border" /> : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed text-muted-foreground"><QrCode className="h-8 w-8" /></div>}
+                  {paymentSettings?.gotymeQrUrl ? <img src={paymentSettings.gotymeQrUrl} alt="GoTyme QR" className="mx-auto max-h-40 rounded-xl border" /> : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed text-muted-foreground"><QrCode className="h-8 w-8" /></div>}
                   <div className="text-xs text-muted-foreground">
-                    <p><span className="font-medium text-foreground">Account name:</span> {paymentSettings?.gcashAccountName}</p>
-                    <p><span className="font-medium text-foreground">GCash number:</span> {paymentSettings?.gcashNumber}</p>
+                    <p><span className="font-medium text-foreground">Account name:</span> {paymentSettings?.gotymeAccountName}</p>
+                    <p><span className="font-medium text-foreground">GoTyme number:</span> {paymentSettings?.gotymeNumber}</p>
                     {paymentSettings?.instructions && <p className="mt-1">{paymentSettings.instructions}</p>}
                   </div>
                 </>
               )}
             </div>
             <div className="mt-4 space-y-2">
-              <p className="text-sm font-semibold">Upload GCash receipt (50% down payment)</p>
+              <p className="text-sm font-semibold">Upload GoTyme receipt (50% down payment)</p>
               <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" className="hidden" id="actReceiptInput" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReceiptFile(f) }} />
               {!receiptPreview ? (
                 <label htmlFor="actReceiptInput" className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary/50 hover:text-primary">
