@@ -1,4 +1,5 @@
 import heroImg from '@/assets/images/hero.jpg'
+import pickleballImg from '@/assets/images/pickleball.jpg'
 
 import type { GalleryItem, HeroImage, Policy } from '@/types'
 
@@ -64,6 +65,18 @@ export const MOCK_GALLERY: GalleryItem[] = [
     alt_text: 'Wide view of The Farm resort',
     is_cover: true,
     sort_order: 0,
+    is_active: true,
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: 'mock-photo-pickleball',
+    image_url: pickleballImg,
+    storage_path: 'assets/pickleball.jpg',
+    title: 'Pickleball courts',
+    alt_text: 'Pickleball courts at The Farm',
+    is_cover: false,
+    sort_order: 1,
     is_active: true,
     created_at: NOW,
     updated_at: NOW,

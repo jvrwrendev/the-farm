@@ -115,7 +115,7 @@ export default function BookingPage() {
   const { downPayment, remaining } = calculateDownPayment(total)
 
   const rangeCrossesOccupied = (from: string, to: string): boolean => {
-    const start = parseISO(from); const end = parseISO(to); const cursor = new Date(start); cursor.setDate(cursor.getDate() + 1)
+    const start = parseISO(from); const end = parseISO(to); const cursor = new Date(start)
     while (cursor < end) { if (occupied.has(format(cursor, 'yyyy-MM-dd'))) return true; cursor.setDate(cursor.getDate() + 1) }
     return false
   }
