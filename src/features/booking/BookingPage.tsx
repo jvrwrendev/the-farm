@@ -15,6 +15,8 @@ import {
   Upload,
   Users,
   X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { PublicLayout } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
@@ -75,6 +77,7 @@ export default function BookingPage() {
   const [receiptUrl, setReceiptUrl] = useState('')
   const [uploadingReceipt, setUploadingReceipt] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   const { data: accommodation, isLoading } = useQuery({ queryKey: queryKeys.accommodation, queryFn: getAccommodation })
   const { data: events = [] } = useQuery({ queryKey: queryKeys.calendarEvents(today, maxBookingDate), queryFn: () => getCalendarEvents(today, maxBookingDate), staleTime: 30_000 })
@@ -210,17 +213,51 @@ export default function BookingPage() {
                 <Card>
                   <CardHeader><CardTitle className="font-display text-xl">Your accommodation</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="flex flex-col gap-5 sm:flex-row">
-                      <img src={accommodation.images[0]} alt={accommodation.name} className="h-44 w-full rounded-xl object-cover sm:w-56" />
-                      <div className="flex-1">
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                      <img src={accommodation.images[0]} alt={accommodation.name} className="h-44 w-full shrink-0 rounded-xl object-cover sm:w-56" />
+                      <div className="flex-1 space-y-3">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="font-display text-lg font-semibold">{accommodation.name}</h2>
+                          <h2 className="font-display text-lg font-semibold leading-tight">{accommodation.name}</h2>
                           <Badge variant={accommodation.status === 'available' ? 'success' : 'secondary'}>{accommodation.status === 'available' ? 'Available' : 'Unavailable'}</Badge>
                         </div>
-                        <p className="mt-2 text-sm text-muted-foreground">{accommodation.description}</p>
-                        <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-                          <span className="inline-flex items-center gap-1.5 font-medium"><Users className="h-4 w-4 text-primary" /> Up to {accommodation.maxGuests} guests</span>
-                          <span className="font-semibold text-primary">{formatCurrency(accommodation.pricePerNight)}<span className="ml-1 text-xs font-normal text-muted-foreground">/ night</span></span>
+
+                        <div className="space-y-1.5">
+                          <p className={`text-sm leading-relaxed text-muted-foreground ${descExpanded ? '' : 'line-clamp-3'}`}>
+                            {accommodation.description}
+                          </p>
+                          {accommodation.description && accommodation.description.length > 160 && (
+                            <button
+                              type="button"
+                              onClick={() => setDescExpanded((v) => !v)}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                            >
+                              {descExpanded ? 'Show less' : 'Read more'}
+                              {descExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
+                        </div>
+
+                        {accommodation.amenities?.length ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {accommodation.amenities.map((amenity) => (
+                              <span
+                                key={amenity}
+                                className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground"
+                              >
+                                {amenity}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                          <span className="inline-flex items-center gap-1.5 font-medium">
+                            <Users className="h-4 w-4 text-primary" /> Up to {accommodation.maxGuests} guests
+                          </span>
+                          <span className="font-semibold text-primary">
+                            {formatCurrency(accommodation.pricePerNight)}
+                            <span className="ml-1 text-xs font-normal text-muted-foreground">/ night</span>
+                          </span>
                         </div>
                       </div>
                     </div>
