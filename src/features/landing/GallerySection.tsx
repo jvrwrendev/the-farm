@@ -4,6 +4,7 @@ import { X, ChevronLeft, ChevronRight, ImageIcon, Waves, BedDouble, UtensilsCros
 import { getPolicies } from '@/services/resort.service'
 import { useQuery } from '@tanstack/react-query'
 import { getActiveImages } from '@/features/admin/imageStorage'
+import { MOCK_GALLERY } from '@/features/landing/mockContent'
 import type { GalleryItem } from '@/types'
 
 type TileSize = 'cover' | 'tall' | 'wide' | 'square'
@@ -38,7 +39,9 @@ export function GallerySection() {
     created_at: img.uploadedAt,
     updated_at: img.uploadedAt,
   }))
-  const gallery: GalleryItem[] = managedGallery.sort(
+  // Fall back to bundled gallery images when no managed images are available
+  // (e.g. on a fresh deployment or a new browser/device).
+  const gallery: GalleryItem[] = (managedGallery.length > 0 ? managedGallery : MOCK_GALLERY).sort(
     (a, b) => a.sort_order - b.sort_order,
   )
 
@@ -74,7 +77,7 @@ export function GallerySection() {
 
         {gallery.length === 0 ? (
           <div className="rounded-2xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-            No photos yet. Add images to <code className="rounded bg-muted px-1.5 py-0.5 text-xs">src/assets/images/</code> to populate the gallery.
+            No photos yet. Add images in Admin → Image Management to populate the gallery.
           </div>
         ) : (
           <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-3 md:auto-rows-[200px] lg:grid-cols-4 lg:auto-rows-[220px]">

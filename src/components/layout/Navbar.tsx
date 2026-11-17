@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ChevronDown, Menu, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { BRAND_NAME, BRAND_LOGO_URL, BRAND_LOGO_ALT } from '@/lib/brand'
 import { cn } from '@/lib/utils'
@@ -79,11 +81,13 @@ const observedSectionIds = [
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [bookNowOpen, setBookNowOpen] = useState(false)
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState('home')
   const [scrolled, setScrolled] = useState(false)
   const intersectionRatios = useRef(new Map<string, number>())
   const location = useLocation()
+  const navigate = useNavigate()
   const isLanding = location.pathname === '/'
   const isPickleballPage = location.pathname.startsWith('/pickleball')
   const isActivityPage =
@@ -285,6 +289,11 @@ export function Navbar() {
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {showPublicNav && (
+              <Button size="sm" onClick={() => setBookNowOpen(true)}>
+                Book now
+              </Button>
+            )}
+            {showPublicNav && (
               <button
                 className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
                 onClick={() => {
@@ -418,6 +427,39 @@ export function Navbar() {
           )}
         </AnimatePresence>
       </nav>
+      {showPublicNav && (
+        <Dialog open={bookNowOpen} onOpenChange={setBookNowOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader className="space-y-1.5 border-b border-border/60 pb-4">
+              <DialogTitle className="font-display text-xl font-semibold tracking-tight">Book now</DialogTitle>
+              <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+                Select a category to start your booking.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-2 pt-4 sm:grid-cols-2">
+              {[
+                { label: 'Accommodation', to: '/book' },
+                { label: 'Pickleball', to: '/pickleball/book' },
+                { label: 'Billiards', to: '/billiards/book' },
+                { label: 'ATV Rental', to: '/atv/book' },
+              ].map((category) => (
+                <Button
+                  key={category.to}
+                  variant="outline"
+                  className="h-11 justify-start font-medium transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  onClick={() => {
+                    setBookNowOpen(false)
+                    setMobileOpen(false)
+                    navigate(category.to)
+                  }}
+                >
+                  {category.label}
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </header>
   )
 }
