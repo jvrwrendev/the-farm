@@ -71,13 +71,12 @@ function formatLongDate(s: string | null) {
 async function isAdmin(req: Request): Promise<boolean> {
   const auth = req.headers.get('Authorization')
   if (!auth) return false
-  const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { Authorization: auth } },
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { data: { user } } = await userClient.auth.getUser()
-  if (!user) return false
-  const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const token = auth.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return false
+  // Verify the caller's JWT using the service-role client (no anon key required).
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  if (error || !user) return false
+  const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
   return data?.role === 'admin'
 }
 
@@ -282,6 +281,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+      return json({ error: 'MISSING_ENV: check function secrets' }, 500)
+    }
     if (!(await isAdmin(req))) return json({ error: 'NOT_AUTHORIZED' }, 401)
 
     const body = await req.json().catch(() => ({}))
