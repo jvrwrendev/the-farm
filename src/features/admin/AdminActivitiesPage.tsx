@@ -843,8 +843,8 @@ function AdminActivityTab({
                                   try {
                                     const res = await sendBookingConfirmation(booking.activityType, booking.reference)
                                     if (res?.status === 'failed') toast.warning('Approved, but confirmation email failed to send.')
-                                  } catch {
-                                    toast.warning('Approved, but confirmation email could not be sent.')
+                                  } catch (err) {
+                                    toast.warning(`Approved, but confirmation email could not be sent: ${err instanceof Error ? err.message : 'Unknown error'}`)
                                   }
                                   queryClient.invalidateQueries({ queryKey: ['activity-bookings'] })
                                   queryClient.invalidateQueries({ queryKey: ['payment-records'] })

@@ -383,8 +383,8 @@ function BookingStatusActions({
         try {
           const res = await sendBookingConfirmation(paymentType as 'accommodation' | 'pickleball' | 'atv' | 'billiards', reference)
           if (res?.status === 'failed') toast.warning('Approved, but confirmation email failed to send.')
-        } catch {
-          toast.warning('Approved, but confirmation email could not be sent.')
+        } catch (err) {
+          toast.warning(`Approved, but confirmation email could not be sent: ${err instanceof Error ? err.message : 'Unknown error'}`)
         }
       } else if (newStatus === 'cancelled' && status === 'pending') {
         await rejectBooking(paymentType as 'accommodation' | 'pickleball' | 'atv' | 'billiards', reference, rejectReason)
