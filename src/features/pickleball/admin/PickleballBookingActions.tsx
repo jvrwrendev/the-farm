@@ -1,8 +1,7 @@
-import {
-  Eye,
-  Loader2,
-  MoreHorizontal,
-} from 'lucide-react'
+import { useState } from 'react'
+import { Eye, Loader2, MoreHorizontal } from 'lucide-react'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,6 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { PickleballBooking, PickleballBookingStatus } from '../types'
 import { usePickleballStatusMutation } from '../usePickleballStatusMutation'
+import { approveBooking } from '@/services/payment.service'
+import { sendBookingConfirmation } from '@/services/email.service'
 
 const VARIANTS: Record<PickleballBookingStatus, 'default' | 'outline' | 'destructive'> = {
   pending: 'outline',
@@ -71,7 +72,36 @@ export function PickleballBookingActions({
   variant = 'inline',
 }: PickleballBookingActionsProps) {
   const mutation = usePickleballStatusMutation(onStatusChanged)
+  const queryClient = useQueryClient()
+  const [approving, setApproving] = useState(false)
   const statuses = nextPickleballStatuses(booking.status)
+  const busy = mutation.isPending || approving
+
+  const handleAction = async (status: PickleballBookingStatus) => {
+    if (status === 'confirmed' && booking.status === 'pending') {
+      setApproving(true)
+      try {
+        await approveBooking('pickleball', booking.reference)
+        toast.success(`${booking.reference} approved.`)
+        try {
+          const res = await sendBookingConfirmation('pickleball', booking.reference)
+          if (res?.status === 'failed') toast.warning('Approved, but confirmation email failed to send.')
+        } catch (err) {
+          toast.warning(`Approved, but confirmation email could not be sent: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        }
+        queryClient.invalidateQueries({ queryKey: ['pickleball'] })
+        queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+        queryClient.invalidateQueries({ queryKey: ['payment-records'] })
+        onStatusChanged?.({ ...booking, status: 'confirmed' })
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Unable to approve booking.')
+      } finally {
+        setApproving(false)
+      }
+      return
+    }
+    mutation.mutate({ reference: booking.reference, status })
+  }
 
   if (variant === 'menu') {
     return (
@@ -98,18 +128,17 @@ export function PickleballBookingActions({
             {onView && statuses.length > 0 && <DropdownMenuSeparator />}
             {statuses.map((status) => {
               const isActive =
-                mutation.isPending &&
-                mutation.variables?.reference === booking.reference &&
-                mutation.variables?.status === status
+                (mutation.isPending &&
+                  mutation.variables?.reference === booking.reference &&
+                  mutation.variables?.status === status) ||
+                (approving && status === 'confirmed')
 
               return (
                 <DropdownMenuItem
                   key={status}
                   variant={status === 'cancelled' ? 'destructive' : 'default'}
-                  disabled={mutation.isPending}
-                  onSelect={() =>
-                    mutation.mutate({ reference: booking.reference, status })
-                  }
+                  disabled={busy}
+                  onSelect={() => void handleAction(status)}
                 >
                   {isActive ? <Loader2 className="animate-spin" /> : null}
                   {actionLabel(booking.status, status)}
@@ -140,11 +169,13 @@ export function PickleballBookingActions({
             size="sm"
             variant={VARIANTS[status]}
             loading={
-              mutation.isPending &&
-              mutation.variables?.reference === booking.reference &&
-              mutation.variables?.status === status
+              (mutation.isPending &&
+                mutation.variables?.reference === booking.reference &&
+                mutation.variables?.status === status) ||
+              (approving && status === 'confirmed')
             }
-            onClick={() => mutation.mutate({ reference: booking.reference, status })}
+            onClick={() => void handleAction(status)}
+            disabled={busy}
           >
             {shortLabel(booking.status, status)}
           </Button>

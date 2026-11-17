@@ -197,6 +197,11 @@ export function Navbar() {
               {BRAND_NAME}
             </span>
           </Link>
+          {isLanding && showPublicNav && (
+            <p className="flex-1 px-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-foreground/80 sm:text-sm lg:hidden">
+              The entire resort, exclusively yours
+            </p>
+          )}
 
           {showPublicNav && (
             <div className="hidden items-center gap-1 lg:flex">
