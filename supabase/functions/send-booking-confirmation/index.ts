@@ -68,16 +68,19 @@ function formatLongDate(s: string | null) {
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-async function isAdmin(req: Request): Promise<boolean> {
+async function isAdmin(req: Request): Promise<{ ok: boolean; reason: string }> {
   const auth = req.headers.get('Authorization')
-  if (!auth) return false
+  if (!auth) return { ok: false, reason: 'no_authorization_header' }
   const token = auth.replace(/^Bearer\s+/i, '').trim()
-  if (!token) return false
-  // Verify the caller's JWT using the service-role client (no anon key required).
+  if (!token) return { ok: false, reason: 'empty_token' }
   const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) return false
-  const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  return data?.role === 'admin'
+  if (error) return { ok: false, reason: `auth_getUser_error: ${error.message}` }
+  if (!user) return { ok: false, reason: 'no_user_from_token' }
+  const { data, error: profileError } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (profileError) return { ok: false, reason: `profile_query_error: ${profileError.message}` }
+  if (!data) return { ok: false, reason: `no_profile_for_user ${user.id}` }
+  if (data.role !== 'admin') return { ok: false, reason: `role_is_${data.role}` }
+  return { ok: true, reason: 'ok' }
 }
 
 async function fetchBooking(type: BookingType, reference: string): Promise<BookingData | null> {
@@ -284,7 +287,8 @@ Deno.serve(async (req) => {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
       return json({ error: 'MISSING_ENV: check function secrets' }, 500)
     }
-    if (!(await isAdmin(req))) return json({ error: 'NOT_AUTHORIZED' }, 401)
+    const adminCheck = await isAdmin(req)
+    if (!adminCheck.ok) return json({ error: 'NOT_AUTHORIZED', reason: adminCheck.reason }, 401)
 
     const body = await req.json().catch(() => ({}))
     const type = body?.bookingType as BookingType

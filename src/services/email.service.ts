@@ -86,6 +86,7 @@ export async function sendBookingConfirmation(
     if ('context' in error && error.context instanceof Response) {
       const responseBody = await error.context.json().catch(() => null)
       message = responseBody?.error ?? message
+      if (responseBody?.reason) message = `${message}: ${responseBody.reason}`
     }
 
     console.error('Booking confirmation error:', message)
