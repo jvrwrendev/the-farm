@@ -139,7 +139,7 @@ export function RoomsSection() {
                   <span className="ml-1 text-sm font-normal text-muted-foreground">/ night</span>
                 </p>
               </div>
-              <Button asChild size="lg" className="rounded-full px-6">
+              <Button asChild size="lg" className="rounded-[5px] px-6">
                 <Link to="/book">Book Now</Link>
               </Button>
             </div>

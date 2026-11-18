@@ -1,22 +1,61 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { Calendar, Bed, Tag, CalendarCheck2 } from 'lucide-react'
+import { Calendar, Bed, Tag, CalendarCheck2, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { HERO_BACKGROUND_URL } from '@/features/landing/mockContent'
 import { getAccommodation } from '@/services/accommodation.service'
 import { queryKeys } from '@/lib/queryKeys'
-import { formatCurrency } from '@/lib/utils'
-import { DEFAULT_PRICE_PER_NIGHT } from '@/lib/constants'
 import { BRAND_NAME } from '@/lib/brand'
 
-export function HeroSection() {
-  const { data: accommodation } = useQuery({
-    queryKey: queryKeys.accommodation,
-    queryFn: getAccommodation,
-  })
-  const price = accommodation?.pricePerNight ?? DEFAULT_PRICE_PER_NIGHT
+const HERO_INFO_CARDS: Array<{ icon: LucideIcon; title: string; subtitle: string }> = [
+  {
+    icon: Bed,
+    title: 'Exclusive Accommodation',
+    subtitle: 'The whole resort, one group',
+  },
+  {
+    icon: Tag,
+    title: '₱6,500 / night',
+    subtitle: 'Transparent, flat rate',
+  },
+  {
+    icon: CalendarCheck2,
+    title: 'Easy Booking',
+    subtitle: 'Reserve online in minutes',
+  },
+]
 
+function HeroInfoCard({
+  icon: Icon,
+  title,
+  subtitle,
+  delay = 0,
+}: {
+  icon: LucideIcon
+  title: string
+  subtitle: string
+  delay?: number
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.6, delay }}
+      className="glass-dark flex items-center gap-3 rounded-2xl px-4 py-3"
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="text-white">
+        <p className="text-sm font-semibold leading-tight">{title}</p>
+        <p className="text-xs text-white/75">{subtitle}</p>
+      </div>
+    </motion.div>
+  )
+}
+
+export function HeroSection() {
   return (
     <section
       id="home"
@@ -75,9 +114,9 @@ export function HeroSection() {
               className="mt-6 inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 backdrop-blur"
             >
               <span className="text-sm font-medium text-white/85">
-                Exclusive Resort Accommodation
+                Exclusive Accommodation
               </span>
-              <span className="font-display text-2xl font-bold text-white">{formatCurrency(price)}</span>
+              <span className="font-display text-2xl font-bold text-white">₱6,500</span>
               <span className="text-sm text-white/75">/ night</span>
             </motion.div>
 
@@ -87,7 +126,7 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.25 }}
               className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
             >
-              <Button size="lg" asChild className="rounded-full px-7">
+              <Button size="lg" asChild className="rounded-[5px] px-7">
                 <Link to="/book">
                   <Calendar className="h-4 w-4" />
                   Book Your Stay
@@ -97,7 +136,7 @@ export function HeroSection() {
                 variant="outline"
                 size="lg"
                 asChild
-                className="rounded-full border-white/40 bg-white/10 px-7 text-white backdrop-blur hover:bg-white/20 hover:text-white"
+                className="rounded-[5px] border-white/40 bg-white/10 px-7 text-white backdrop-blur hover:bg-white/20 hover:text-white"
               >
                 <a href="#rooms">View Accommodation</a>
               </Button>
@@ -106,72 +145,16 @@ export function HeroSection() {
 
           {/* Right column: floating info cards */}
           <div className="hidden lg:col-span-5 lg:flex lg:flex-col lg:items-end lg:gap-4">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="glass-dark rounded-2xl px-4 py-3 flex items-center gap-3"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
-                <Bed className="h-4 w-4" />
-              </span>
-              <div className="text-white">
-                <p className="text-sm font-semibold leading-tight">Exclusive Accommodation</p>
-                <p className="text-xs text-white/75">The whole resort, one group</p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="glass-dark rounded-2xl px-4 py-3 flex items-center gap-3"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
-                <Tag className="h-4 w-4" />
-              </span>
-              <div className="text-white">
-                <p className="text-sm font-semibold leading-tight">{formatCurrency(price)} / night</p>
-                <p className="text-xs text-white/75">Transparent, flat rate</p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="glass-dark rounded-2xl px-4 py-3 flex items-center gap-3"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
-                <CalendarCheck2 className="h-4 w-4" />
-              </span>
-              <div className="text-white">
-                <p className="text-sm font-semibold leading-tight">Easy Booking</p>
-                <p className="text-xs text-white/75">Reserve online in minutes</p>
-              </div>
-            </motion.div>
+            {HERO_INFO_CARDS.map((card, index) => (
+              <HeroInfoCard key={card.title} {...card} delay={0.3 + index * 0.1} />
+            ))}
           </div>
 
-          {/* Mobile chips (horizontal) */}
-          <div className="flex gap-3 overflow-x-auto pb-1 lg:hidden">
-            <div className="glass-dark rounded-2xl px-4 py-3 flex items-center gap-3 shrink-0">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
-                <Bed className="h-4 w-4" />
-              </span>
-              <p className="text-sm font-semibold text-white">Exclusive Accommodation</p>
-            </div>
-            <div className="glass-dark rounded-2xl px-4 py-3 flex items-center gap-3 shrink-0">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
-                <Tag className="h-4 w-4" />
-              </span>
-              <p className="text-sm font-semibold text-white">Best Price</p>
-            </div>
-            <div className="glass-dark rounded-2xl px-4 py-3 flex items-center gap-3 shrink-0">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
-                <CalendarCheck2 className="h-4 w-4" />
-              </span>
-              <p className="text-sm font-semibold text-white">Easy Booking</p>
-            </div>
+          {/* Mobile info cards (vertical) */}
+          <div className="flex flex-col gap-3 lg:hidden">
+            {HERO_INFO_CARDS.map((card, index) => (
+              <HeroInfoCard key={card.title} {...card} delay={0.3 + index * 0.1} />
+            ))}
           </div>
         </div>
       </div>

@@ -149,7 +149,7 @@ export function AvailabilitySection() {
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-4 flex justify-end"
                 >
-                  <Button asChild className="rounded-full px-6">
+                  <Button asChild className="rounded-[5px] px-6">
                     <Link to="/book">Book this date</Link>
                   </Button>
                 </motion.div>
@@ -178,7 +178,7 @@ export function AvailabilitySection() {
                           : ''}
                       </p>
                     </div>
-                    <Button asChild className="rounded-full"><Link to="/billiards/book">{billiardsExclusive ? 'Book exclusively' : 'Book a table'}</Link></Button>
+                    <Button asChild className="rounded-[5px]"><Link to="/billiards/book">{billiardsExclusive ? 'Book exclusively' : 'Book a table'}</Link></Button>
                   </div>
                 )
               })()}
@@ -198,7 +198,7 @@ export function AvailabilitySection() {
                       Reserve all pickleball courts for a full day · {formatCurrency(Number(pickleballSettings?.exclusiveRate24h ?? 0))} / day
                     </p>
                   </div>
-                  <Button asChild className="rounded-full"><Link to="/pickleball/book">Book exclusively</Link></Button>
+                  <Button asChild className="rounded-[5px]"><Link to="/pickleball/book">Book exclusively</Link></Button>
                 </div>
               )}
               <p className="mb-4 text-center text-sm text-muted-foreground">

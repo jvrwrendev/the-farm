@@ -156,13 +156,13 @@ function ActivitySection({
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" asChild className="rounded-full px-6">
+            <Button size="lg" asChild className="rounded-[5px] px-6">
               <Link to={`/${type}/book`}>
                 <CalendarCheck2 className="h-4 w-4" />
                 Book {type === 'atv' ? 'an ATV' : 'a Table'}
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="rounded-full px-6">
+            <Button size="lg" variant="outline" asChild className="rounded-[5px] px-6">
               <Link to={`/${type}/book`}>
                 View availability
                 <ArrowRight className="h-4 w-4" />

@@ -96,7 +96,7 @@ export function BookingSearchSection() {
                     aria-label="Search bookings"
                   />
                 </div>
-                <Button type="submit" className="sm:w-32" disabled={isFetching}>
+                <Button type="submit" className="rounded-[5px] sm:w-32" disabled={isFetching}>
                   {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   Search
                 </Button>

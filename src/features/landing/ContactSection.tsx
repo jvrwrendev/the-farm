@@ -88,7 +88,7 @@ export function ContactSection() {
                 </a>
               </div>
             </div>
-            <Button asChild className="rounded-full px-6">
+            <Button asChild className="rounded-[5px] px-6">
               <a href={directionsHref} target="_blank" rel="noreferrer">
                 <Navigation className="h-4 w-4" /> Get directions
               </a>

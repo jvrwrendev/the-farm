@@ -112,7 +112,7 @@ export function PickleballTeaserSection() {
             <Button
               size="lg"
               asChild
-              className="rounded-full bg-primary-foreground px-6 text-primary hover:bg-primary-foreground/90"
+              className="rounded-[5px] bg-primary-foreground px-6 text-primary hover:bg-primary-foreground/90"
             >
               <Link to="/pickleball">
                 Explore the courts
@@ -123,7 +123,7 @@ export function PickleballTeaserSection() {
               size="lg"
               variant="outline"
               asChild
-              className="rounded-full border-primary-foreground/40 bg-transparent px-6 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              className="rounded-[5px] border-primary-foreground/40 bg-transparent px-6 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
             >
               <Link to="/pickleball/book">
                 <CalendarCheck2 className="h-4 w-4" />
