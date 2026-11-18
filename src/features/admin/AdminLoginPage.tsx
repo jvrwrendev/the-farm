@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
+import { AdminLoginError, type AdminLoginAttemptInfo } from '@/services/adminAuth.service'
 import { BRAND_LOGO_ALT, BRAND_LOGO_URL, BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 import heroImage from '@/assets/images/hero.jpg'
 
@@ -16,6 +17,13 @@ type Mode = 'login' | 'forgot' | 'recovery'
 interface LocationState {
   from?: { pathname?: string }
   denied?: boolean
+}
+
+function formatCountdown(milliseconds: number): string {
+  const totalSeconds = Math.ceil(Math.max(0, milliseconds) / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
 export default function AdminLoginPage() {
@@ -32,6 +40,8 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [denied, setDenied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [attemptInfo, setAttemptInfo] = useState<AdminLoginAttemptInfo>({})
+  const [now, setNow] = useState(() => Date.now())
 
   // forgot
   const [forgotEmail, setForgotEmail] = useState('')
@@ -61,6 +71,20 @@ export default function AdminLoginPage() {
     return () => sub.subscription.unsubscribe()
   }, [location.state])
 
+  useEffect(() => {
+    if (!attemptInfo.isLocked || !attemptInfo.lockedUntil) return
+    setNow(Date.now())
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [attemptInfo.isLocked, attemptInfo.lockedUntil])
+
+  const lockExpiresAt = attemptInfo.lockedUntil
+    ? new Date(attemptInfo.lockedUntil).getTime()
+    : 0
+  const lockRemainingMs = Math.max(0, lockExpiresAt - now)
+  const isLocked = Boolean(attemptInfo.isLocked && lockRemainingMs > 0)
+  const formDisabled = isLocked || submitting
+
   if (user && isAdmin && mode !== 'recovery') {
     return <Navigate to="/admin/dashboard" replace />
   }
@@ -71,12 +95,25 @@ export default function AdminLoginPage() {
     event.preventDefault()
     setError('')
     setDenied(false)
+    setAttemptInfo({})
     setSubmitting(true)
     try {
       await signIn(email, password)
+      setAttemptInfo({})
       navigate(from && from.startsWith('/admin') ? from : '/admin/dashboard', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in.')
+      if (err instanceof AdminLoginError) {
+        setAttemptInfo({
+          remaining: err.remaining,
+          lockedUntil: err.lockedUntil,
+          isLocked: err.isLocked,
+          failedAttempts: err.failedAttempts,
+        })
+        setNow(Date.now())
+        setError(err.message)
+      } else {
+        setError(err instanceof Error ? err.message : 'Unable to sign in.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -155,7 +192,13 @@ export default function AdminLoginPage() {
                 placeholder="admin@example.com"
                 className="h-11 pl-9"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setError('')
+                  setDenied(false)
+                  setAttemptInfo({})
+                }}
+                disabled={formDisabled}
                 required
               />
             </div>
@@ -187,27 +230,41 @@ export default function AdminLoginPage() {
                 className="h-11 pl-9 pr-10"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={formDisabled}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
+                disabled={formDisabled}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
 
-          {(denied || error) && (
+          {(denied || (error && !isLocked)) && (
             <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {denied ? 'Your account is signed in but does not have administrator access.' : error}
             </p>
           )}
 
-          <Button type="submit" className="h-11 w-full" disabled={submitting}>
-            {submitting ? (
+          {isLocked && (
+            <div
+              role="alert"
+              className="rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200"
+            >
+              Too many attempts. Try again in{' '}
+              <span className="font-semibold tabular-nums">{formatCountdown(lockRemainingMs)}</span>.
+            </div>
+          )}
+
+          <Button type="submit" className="h-11 w-full" disabled={formDisabled}>
+            {isLocked ? (
+              <>Locked for {formatCountdown(lockRemainingMs)}</>
+            ) : submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
               </>

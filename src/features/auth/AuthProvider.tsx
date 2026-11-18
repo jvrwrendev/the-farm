@@ -9,7 +9,8 @@ import {
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { mapAuthError, mapPostgrestError } from '@/lib/errors'
+import { mapPostgrestError } from '@/lib/errors'
+import { signInAdmin } from '@/services/adminAuth.service'
 import type { Profile } from '@/types'
 
 interface AuthContextType {
@@ -112,17 +113,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      throw new Error(mapAuthError(error))
+    // The Edge Function enforces the 3-attempt / 3-minute lockout and verifies
+    // admin access before issuing a session.
+    const adminSession = await signInAdmin(email, password)
+
+    const { data, error: sessionError } = await supabase.auth.setSession({
+      access_token: adminSession.accessToken,
+      refresh_token: adminSession.refreshToken,
+    })
+
+    if (sessionError || !data.session || !data.user) {
+      await supabase.auth.signOut()
+      throw new Error('Unable to start your session. Please try again.')
     }
-    if (!data.user) {
-      throw new Error('Unable to sign in. Please try again.')
-    }
-    const prof = await fetchProfile(data.user.id)
-    setSession(data.session ?? null)
-    setUser(data.user)
-    setProfile(prof ?? buildProfileFromUser(data.user))
+
+    const user = data.user
+    const prof = await fetchProfile(user.id)
+    setSession(data.session)
+    setUser(user)
+    setProfile(prof ?? buildProfileFromUser(user))
 
     if (prof && prof.role !== 'admin') {
       await supabase.auth.signOut()
@@ -133,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (!prof) {
       // Profile not provisioned yet — accept login but warn on next render.
-      setProfile(buildProfileFromUser(data.user))
+      setProfile(buildProfileFromUser(user))
     }
   }, [])
 
