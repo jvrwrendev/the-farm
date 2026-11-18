@@ -191,93 +191,117 @@ interface AmenityCard {
   id: string
   name: string
   description: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
 }
 
 const CURATED_AMENITIES: AmenityCard[] = [
   {
     id: 'pool',
     name: 'Swimming Pool',
-    description: 'A refreshing private pool, perfect for sunny afternoons.',
+    description: 'A private pool reserved for your group, ideal for unhurried afternoons under the sun.',
     icon: Waves,
   },
   {
     id: 'rooms',
     name: 'Comfortable Rooms',
-    description: 'Spacious rooms with fresh linens and cozy beds.',
+    description: 'Spacious, well-appointed rooms with fresh linens and restful beds for a peaceful stay.',
     icon: BedDouble,
   },
   {
     id: 'restaurant',
-    name: 'Restaurant',
-    description: 'An open-air dining area for shared meals and celebrations.',
+    name: 'Dining Area',
+    description: 'An open-air space for shared meals and intimate celebrations, enjoyed at your own pace.',
     icon: UtensilsCrossed,
   },
   {
     id: 'wifi',
     name: 'Wi-Fi',
-    description: 'Stay connected with complimentary internet access.',
+    description: 'Complimentary internet access throughout the property, whenever you need to connect.',
     icon: Wifi,
   },
   {
     id: 'parking',
     name: 'Parking',
-    description: 'Secure on-site parking for up to six vehicles.',
+    description: 'Secure on-site parking for your group, with space for multiple vehicles.',
     icon: Car,
   },
   {
     id: 'nature',
-    name: 'Outdoor / Nature',
-    description: 'Lush gardens, gazebos, and quiet corners to unwind.',
+    name: 'Gardens & Outdoors',
+    description: 'Lush greenery, quiet corners, and open grounds that invite you to slow down and unwind.',
     icon: Trees,
   },
 ]
 
 export function AmenitiesSection() {
   return (
-    <section id="amenities" className="scroll-mt-28 bg-background py-20 px-4 sm:px-6 lg:py-24">
-      <div className="mx-auto max-w-7xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mx-auto mb-12 max-w-2xl text-center"
-        >
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            Amenities
-          </span>
-          <h2 className="font-display mt-4 text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl">
-            Everything you need for a perfect stay
-          </h2>
-          <p className="mt-4 text-base text-muted-foreground sm:text-lg">
-            Designed for comfort, relaxation, and effortless gatherings.
-          </p>
-        </motion.div>
+    <section id="amenities" className="scroll-mt-28 bg-background px-4 py-20 sm:px-6 lg:py-28">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="lg:col-span-5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/80">
+              The Farm Resort
+            </p>
+            <h2 className="font-display mt-4 text-3xl font-semibold leading-tight text-foreground sm:text-4xl lg:text-[2.75rem]">
+              Your Private Escape, Your Own Paradise
+            </h2>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Reserved exclusively for one group at a time, The Farm offers a calm, refined setting
+              where every space is yours to enjoy. Thoughtful comforts, open surroundings, and
+              unhurried privacy come together for a stay that feels personal and effortless.
+            </p>
+            <div className="mt-8 h-px w-16 bg-primary/30" aria-hidden="true" />
+            <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
+              From quiet mornings in the garden to relaxed gatherings by the pool, each amenity is
+              designed to complement the resort&apos;s private, welcoming atmosphere.
+            </p>
+          </motion.div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {CURATED_AMENITIES.map((amenity, i) => {
-            const Icon = amenity.icon
-            return (
-              <motion.div
-                key={amenity.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05, duration: 0.5 }}
-                className="flex items-start gap-4 rounded-2xl border bg-card p-6"
-              >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Icon className="h-6 w-6" />
-                </span>
-                <div>
-                  <h3 className="font-semibold text-base text-foreground">{amenity.name}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{amenity.description}</p>
-                </div>
-              </motion.div>
-            )
-          })}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.05 }}
+            className="lg:col-span-7"
+          >
+            <div className="mb-6 flex items-center justify-between gap-4 border-b border-border/70 pb-4">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground/80">
+                Resort Amenities
+              </h3>
+              <span className="text-xs text-muted-foreground">Exclusively yours during your stay</span>
+            </div>
+            <ul className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+              {CURATED_AMENITIES.map((amenity, i) => {
+                const Icon = amenity.icon
+                return (
+                  <motion.li
+                    key={amenity.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.04, duration: 0.4 }}
+                    className="group flex items-start gap-4"
+                  >
+                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/15 bg-primary/[0.04] text-primary">
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-medium text-foreground">{amenity.name}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        {amenity.description}
+                      </p>
+                    </div>
+                  </motion.li>
+                )
+              })}
+            </ul>
+          </motion.div>
         </div>
       </div>
     </section>

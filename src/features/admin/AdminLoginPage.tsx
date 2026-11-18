@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, KeyRound, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,8 +10,6 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
 import { BRAND_LOGO_ALT, BRAND_LOGO_URL, BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 import heroImage from '@/assets/images/hero.jpg'
-
-const REMEMBER_KEY = 'farm_admin_remembered_email'
 
 type Mode = 'login' | 'forgot' | 'recovery'
 
@@ -31,7 +29,6 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [denied, setDenied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -49,18 +46,10 @@ export default function AdminLoginPage() {
   const [recoverySubmitting, setRecoverySubmitting] = useState(false)
   const [recoveryError, setRecoveryError] = useState('')
 
-  // Prefill remembered email + detect recovery mode
   useEffect(() => {
-    const saved = localStorage.getItem(REMEMBER_KEY)
-    if (saved) {
-      setEmail(saved)
-      setRememberMe(true)
-    }
-
     const state = (location.state ?? null) as LocationState | null
     if (state?.denied) setDenied(true)
 
-    // Detect recovery from URL hash
     const hash = window.location.hash
     if (hash.includes('type=recovery')) {
       setMode('recovery')
@@ -85,8 +74,6 @@ export default function AdminLoginPage() {
     setSubmitting(true)
     try {
       await signIn(email, password)
-      if (rememberMe) localStorage.setItem(REMEMBER_KEY, email)
-      else localStorage.removeItem(REMEMBER_KEY)
       navigate(from && from.startsWith('/admin') ? from : '/admin/dashboard', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to sign in.')
@@ -98,14 +85,14 @@ export default function AdminLoginPage() {
   const handleForgot = async (event: FormEvent) => {
     event.preventDefault()
     setForgotError('')
-    const email = forgotEmail.trim()
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const value = forgotEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       setForgotError('Enter a valid email address.')
       return
     }
     setForgotSubmitting(true)
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(value, {
         redirectTo: `${window.location.origin}/admin/login`,
       })
       if (resetError) throw resetError
@@ -144,14 +131,18 @@ export default function AdminLoginPage() {
 
   const renderLogin = () => (
     <>
-      <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 font-display text-2xl">
-          <ShieldCheck className="h-5 w-5 text-primary" />
+      <CardHeader className="space-y-1.5 p-0">
+        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg border border-primary/15 bg-primary/5">
+          <ShieldCheck className="h-5 w-5 text-primary" strokeWidth={1.75} />
+        </div>
+        <CardTitle className="font-display text-2xl font-semibold tracking-tight text-foreground">
           Welcome back
         </CardTitle>
-        <CardDescription>Sign in to your admin account to manage the resort.</CardDescription>
+        <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+          Sign in to your admin account to manage the resort.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 pt-7">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email">Email address</Label>
@@ -162,7 +153,7 @@ export default function AdminLoginPage() {
                 type="email"
                 autoComplete="email"
                 placeholder="admin@example.com"
-                className="pl-9"
+                className="h-11 pl-9"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -171,15 +162,29 @@ export default function AdminLoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotEmail(email)
+                  setForgotError('')
+                  setForgotSent(false)
+                  setMode('forgot')
+                }}
+                className="text-xs font-medium text-primary hover:underline underline-offset-4"
+              >
+                Forgot password?
+              </button>
+            </div>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                placeholder="••••••••"
-                className="pl-9 pr-10"
+                placeholder="Enter your password"
+                className="h-11 pl-9 pr-10"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -187,7 +192,7 @@ export default function AdminLoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -195,46 +200,13 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-border accent-primary"
-              />
-              Remember me
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                setForgotEmail(email)
-                setForgotError('')
-                setForgotSent(false)
-                setMode('forgot')
-              }}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Forgot password?
-            </button>
-          </div>
-
-          {denied && (
-            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              Your account is signed in but does not have administrator access.
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {error}
+          {(denied || error) && (
+            <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {denied ? 'Your account is signed in but does not have administrator access.' : error}
             </p>
           )}
 
-          <Button
-            type="submit"
-            className="w-full bg-gradient-to-r from-primary to-primary/80 shadow-md transition hover:shadow-lg"
-            disabled={submitting}
-          >
+          <Button type="submit" className="h-11 w-full" disabled={submitting}>
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
@@ -250,22 +222,24 @@ export default function AdminLoginPage() {
 
   const renderForgot = () => (
     <>
-      <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 font-display text-2xl">
-          <KeyRound className="h-5 w-5 text-primary" />
+      <CardHeader className="space-y-1.5 p-0">
+        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg border border-primary/15 bg-primary/5">
+          <KeyRound className="h-5 w-5 text-primary" strokeWidth={1.75} />
+        </div>
+        <CardTitle className="font-display text-2xl font-semibold tracking-tight text-foreground">
           Reset password
         </CardTitle>
-        <CardDescription>
-          Enter your admin email and we'll send you a link to reset your password.
+        <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+          Enter your admin email and we&apos;ll send you a reset link.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 pt-7">
         {forgotSent ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-300">
-              A password reset link has been sent to <span className="font-medium">{forgotEmail}</span>. Check your inbox and follow the instructions.
+          <div className="space-y-5">
+            <div className="rounded-md border border-border bg-muted/30 px-3 py-3 text-sm text-foreground">
+              A reset link has been sent to <span className="font-medium">{forgotEmail}</span>.
             </div>
-            <Button type="button" variant="outline" className="w-full" onClick={() => setMode('login')}>
+            <Button type="button" variant="outline" className="h-11 w-full" onClick={() => setMode('login')}>
               Back to sign in
             </Button>
           </div>
@@ -280,7 +254,7 @@ export default function AdminLoginPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="admin@example.com"
-                  className="pl-9"
+                  className="h-11 pl-9"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   required
@@ -289,23 +263,25 @@ export default function AdminLoginPage() {
             </div>
 
             {forgotError && (
-              <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {forgotError}
               </p>
             )}
 
-            <Button type="submit" className="w-full" disabled={forgotSubmitting}>
-              {forgotSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Sending link...
-                </>
-              ) : (
-                'Send reset link'
-              )}
-            </Button>
-            <Button type="button" variant="ghost" className="w-full" onClick={() => setMode('login')}>
-              Back to sign in
-            </Button>
+            <div className="space-y-2">
+              <Button type="submit" className="h-11 w-full" disabled={forgotSubmitting}>
+                {forgotSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Sending...
+                  </>
+                ) : (
+                  'Send reset link'
+                )}
+              </Button>
+              <Button type="button" variant="ghost" className="h-11 w-full" onClick={() => setMode('login')}>
+                Back to sign in
+              </Button>
+            </div>
           </form>
         )}
       </CardContent>
@@ -314,14 +290,18 @@ export default function AdminLoginPage() {
 
   const renderRecovery = () => (
     <>
-      <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 font-display text-2xl">
-          <Lock className="h-5 w-5 text-primary" />
+      <CardHeader className="space-y-1.5 p-0">
+        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg border border-primary/15 bg-primary/5">
+          <Lock className="h-5 w-5 text-primary" strokeWidth={1.75} />
+        </div>
+        <CardTitle className="font-display text-2xl font-semibold tracking-tight text-foreground">
           Set new password
         </CardTitle>
-        <CardDescription>Choose a new password for your admin account.</CardDescription>
+        <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+          Choose a new password for your admin account.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 pt-7">
         <form onSubmit={handleRecovery} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="new-password">New password</Label>
@@ -332,7 +312,7 @@ export default function AdminLoginPage() {
                 type={showNewPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="At least 8 characters"
-                className="pl-9 pr-10"
+                className="h-11 pl-9 pr-10"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
@@ -340,7 +320,7 @@ export default function AdminLoginPage() {
               <button
                 type="button"
                 onClick={() => setShowNewPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 aria-label={showNewPassword ? 'Hide password' : 'Show password'}
               >
                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -357,7 +337,7 @@ export default function AdminLoginPage() {
                 type={showNewPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="Repeat new password"
-                className="pl-9"
+                className="h-11 pl-9"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -366,12 +346,12 @@ export default function AdminLoginPage() {
           </div>
 
           {recoveryError && (
-            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {recoveryError}
             </p>
           )}
 
-          <Button type="submit" className="w-full" disabled={recoverySubmitting}>
+          <Button type="submit" className="h-11 w-full" disabled={recoverySubmitting}>
             {recoverySubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" /> Updating...
@@ -387,78 +367,72 @@ export default function AdminLoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[70%_30%]">
-      {/* Left: brand image panel */}
-      <div className="relative hidden overflow-hidden lg:block">
+      {/* Left: brand panel */}
+      <aside className="relative hidden overflow-hidden bg-foreground lg:block">
         <img
           src={heroImage}
-          alt="The Farm Resort"
+          alt=""
+          aria-hidden="true"
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-black/20" />
-        <div className="relative flex h-full flex-col justify-between p-10 text-white">
-          <Link to="/" className="flex items-center gap-2">
+        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/55 to-black/40" />
+        <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
+          <Link to="/" className="inline-flex w-fit items-center gap-3 rounded-lg border border-white/15 bg-black/20 px-3 py-2 backdrop-blur-sm transition-colors hover:bg-black/30">
             <img
               src={BRAND_LOGO_URL}
               alt={BRAND_LOGO_ALT}
-              className="h-10 w-10 rounded-md object-cover ring-2 ring-white/30"
+              className="h-9 w-9 rounded-md object-cover ring-1 ring-white/25"
             />
-            <span className="font-display text-2xl font-semibold">{BRAND_NAME}</span>
+            <span className="font-display text-lg font-semibold tracking-tight">{BRAND_NAME}</span>
           </Link>
+
           <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-              Admin portal
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
+              Admin Portal
             </p>
-            <h1 className="font-display mt-3 text-4xl font-bold leading-tight">
+            <h1 className="font-display mt-4 text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">
               Manage your resort with confidence.
             </h1>
-            <p className="mt-4 text-base text-white/80">{BRAND_TAGLINE}</p>
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70">
+              {BRAND_TAGLINE}
+            </p>
           </div>
-          <p className="text-xs text-white/60">
+
+          <p className="text-xs text-white/50">
             © {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
           </p>
         </div>
-      </div>
+      </aside>
 
-      {/* Mobile banner */}
-      <div className="relative h-44 overflow-hidden lg:hidden">
-        <img
-          src={heroImage}
-          alt="The Farm Resort"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
-        <div className="relative flex h-full items-center gap-3 px-6 text-white">
-          <img
-            src={BRAND_LOGO_URL}
-            alt={BRAND_LOGO_ALT}
-            className="h-10 w-10 rounded-md object-cover ring-2 ring-white/30"
-          />
-          <div>
-            <p className="font-display text-xl font-semibold">{BRAND_NAME}</p>
-            <p className="text-xs text-white/80">Admin portal</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right: form */}
-      <div className="flex items-center justify-center bg-secondary/40 px-6 py-12">
+      {/* Right: form panel */}
+      <div className="flex items-center justify-center bg-secondary/30 px-6 py-12 lg:px-10">
         <div className="w-full max-w-sm">
-          <div className="mb-6 flex items-center gap-2 lg:hidden">
-            <img src={BRAND_LOGO_URL} alt={BRAND_LOGO_ALT} className="h-9 w-9 rounded-md object-cover" />
-            <span className="font-display text-xl font-semibold">{BRAND_NAME}</span>
+          {/* Mobile brand header */}
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <img
+              src={BRAND_LOGO_URL}
+              alt={BRAND_LOGO_ALT}
+              className="h-10 w-10 rounded-md object-cover"
+            />
+            <div>
+              <p className="font-display text-lg font-semibold tracking-tight text-foreground">{BRAND_NAME}</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Admin Portal</p>
+            </div>
           </div>
 
-          <Card className="rounded-2xl border-border/60 shadow-xl">
+          <Card className="rounded-xl border border-border/70 bg-card p-6 shadow-sm sm:p-8">
             {mode === 'login' && renderLogin()}
             {mode === 'forgot' && renderForgot()}
             {mode === 'recovery' && renderRecovery()}
           </Card>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground">
-              &larr; Back to website
-            </Link>
-          </p>
+          <Link
+            to="/"
+            className="mt-6 inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to website
+          </Link>
         </div>
       </div>
     </div>

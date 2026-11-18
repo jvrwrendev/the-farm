@@ -7,7 +7,6 @@ import { GallerySection, AmenitiesSection, PoliciesSection } from '@/features/la
 import { AvailabilitySection } from '@/features/landing/AvailabilitySection'
 import { BookingSearchSection } from '@/features/landing/BookingSearchSection'
 import { ContactSection } from '@/features/landing/ContactSection'
-import { ChatbotWidget } from '@/features/landing/ChatbotWidget'
 import { PickleballTeaserSection } from '@/features/pickleball/PickleballTeaserSection'
 import { ActivityTeaserSections } from '@/features/activities/ActivityTeaserSections'
 import { scrollToLandingSection } from '@/lib/scroll'
@@ -39,7 +38,6 @@ export default function LandingPage() {
       <BookingSearchSection />
       <PoliciesSection />
       <ContactSection />
-      <ChatbotWidget />
     </PublicLayout>
   )
 }
