@@ -22,10 +22,17 @@ export function PickleballTeaserSection() {
   )
   const exclusiveRate = Number(facilitySettings?.exclusiveRate24h ?? 0)
 
-  const lowestRate = courts.length
+  const derivedLowestRate = courts.length
     ? Math.min(...courts.map((court) => court.weekdayRate || court.hourlyRate))
     : 0
-  const courtCount = courts.length || 3
+  const openTime = facilitySettings?.openTime || PICKLEBALL_SETTINGS.openTime
+  const closeTime = facilitySettings?.closeTime || PICKLEBALL_SETTINGS.closeTime
+  const courtsCount = (facilitySettings?.courtsCount ?? 0) > 0 ? (facilitySettings?.courtsCount ?? courts.length) : (courts.length || 3)
+  const maxPlayersPerCourt = facilitySettings?.maxPlayersPerCourt || PICKLEBALL_SETTINGS.maxPlayers
+  const startingHourlyRate = (facilitySettings?.startingHourlyRate ?? 0) > 0
+    ? (facilitySettings?.startingHourlyRate ?? derivedLowestRate)
+    : (derivedLowestRate || 0)
+
   const courtNames = courts.map((court) => court.name).join(', ')
   const teaserImage = courts.find((court) => court.imageUrl)?.imageUrl ?? ''
 
@@ -56,7 +63,7 @@ export function PickleballTeaserSection() {
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
           <div className="pointer-events-none absolute bottom-4 left-4 rounded-xl border border-white/20 bg-black/40 px-3 py-2 backdrop-blur">
-            <p className="text-xs font-semibold text-white">{courtCount} courts · Open daily</p>
+            <p className="text-xs font-semibold text-white">{courtsCount} court{courtsCount === 1 ? '' : 's'} · Open daily</p>
             <p className="mt-0.5 text-[11px] text-white/70">
               {courtNames || 'Garden, Center, and Covered'}
             </p>
@@ -82,17 +89,17 @@ export function PickleballTeaserSection() {
 
           <div className="mt-6 flex flex-wrap gap-2 text-xs font-medium">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1.5">
-              <Trophy className="h-3.5 w-3.5" /> {courtCount} courts
+              <Trophy className="h-3.5 w-3.5" /> {courtsCount} court{courtsCount === 1 ? '' : 's'}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1.5">
-              <Users className="h-3.5 w-3.5" /> Up to 4 per court
+              <Users className="h-3.5 w-3.5" /> Up to {maxPlayersPerCourt} per court
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1.5">
               <Clock className="h-3.5 w-3.5" />
-              {formatTimeLabel(PICKLEBALL_SETTINGS.openTime)} – {formatTimeLabel(PICKLEBALL_SETTINGS.closeTime)}
+              {formatTimeLabel(openTime)} – {formatTimeLabel(closeTime)}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1.5">
-              From {formatCurrency(lowestRate)} / hour
+              From {formatCurrency(startingHourlyRate)} / hour
             </span>
             {exclusiveEnabled && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/20 px-3 py-1.5 text-amber-50">
