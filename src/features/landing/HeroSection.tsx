@@ -7,6 +7,7 @@ import { HERO_BACKGROUND_URL } from '@/features/landing/mockContent'
 import { getAccommodation } from '@/services/accommodation.service'
 import { queryKeys } from '@/lib/queryKeys'
 import { BRAND_NAME } from '@/lib/brand'
+import { cn } from '@/lib/utils'
 
 const HERO_INFO_CARDS: Array<{ icon: LucideIcon; title: string; subtitle: string }> = [
   {
@@ -31,25 +32,30 @@ function HeroInfoCard({
   title,
   subtitle,
   delay = 0,
+  className,
 }: {
   icon: LucideIcon
   title: string
   subtitle: string
   delay?: number
+  className?: string
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6, delay }}
-      className="glass-dark flex items-center gap-3 rounded-2xl px-4 py-3"
+      className={cn(
+        'glass-dark flex items-center gap-2.5 rounded-xl px-3 py-2.5 sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3',
+        className,
+      )}
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-primary">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/90 text-primary sm:h-9 sm:w-9">
         <Icon className="h-4 w-4" />
       </span>
-      <div className="text-white">
-        <p className="text-sm font-semibold leading-tight">{title}</p>
-        <p className="text-xs text-white/75">{subtitle}</p>
+      <div className="min-w-0 text-white">
+        <p className="text-[13px] font-semibold leading-tight sm:text-sm">{title}</p>
+        <p className="text-[11px] leading-snug text-white/75 sm:text-xs">{subtitle}</p>
       </div>
     </motion.div>
   )
@@ -60,24 +66,21 @@ export function HeroSection() {
     <section
       id="home"
       className="relative isolate w-full overflow-hidden scroll-mt-28"
-      style={{
-        backgroundImage: `url(${HERO_BACKGROUND_URL})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-        width: '100vw',        minHeight: '100vh',
-      }}
       aria-label={`${BRAND_NAME} hero`}
     >
+      <img
+        src={HERO_BACKGROUND_URL}
+        alt=""
+        aria-hidden
+        className="absolute inset-0 h-full w-full object-cover"
+      />
       {/* Subtle dark overlay for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/70" />
+      <div className="absolute inset-0 bg-black/45 lg:bg-[linear-gradient(to_bottom,rgba(0,0,0,0.55),rgba(0,0,0,0.35),rgba(0,0,0,0.7))]" />
 
-      {/* Added mt-16 sm:mt-20 here to add top margin to the hero content */}
-      <div className="relative mx-auto flex min-h-[640px] max-w-7xl flex-col justify-center px-4 pt-40 pb-20 mt-16 sm:mt-20 sm:px-6 lg:min-h-[720px] lg:pt-48 lg:pb-28">
-        <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-12 lg:gap-12">
+      <div className="relative mx-auto flex min-h-[100svh] max-w-7xl flex-col justify-center px-4 pb-10 pt-28 sm:px-6 sm:pb-16 sm:pt-32 lg:pb-24 lg:pt-36">
+        <div className="grid grid-cols-1 items-center gap-6 sm:gap-8 lg:grid-cols-12 lg:gap-12">
           {/* Left column: copy + CTAs */}
-          <div className="lg:col-span-7 text-white">
+          <div className="min-w-0 text-white lg:col-span-7">
             <motion.span
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -92,7 +95,7 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.05 }}
-              className="font-display mt-5 text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl"
+              className="font-display mt-4 max-w-[14ch] text-[2rem] font-bold leading-[1.1] break-words sm:mt-5 sm:max-w-none sm:text-5xl lg:text-6xl"
             >
               The entire resort, exclusively yours
             </motion.h1>
@@ -101,7 +104,7 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-              className="mt-5 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg"
+              className="mt-4 max-w-xl text-[15px] leading-relaxed text-white/85 sm:mt-5 sm:text-lg"
             >
               One exclusive accommodation, one group at a time. Check availability and reserve your
               private escape online.
@@ -111,22 +114,28 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-6 inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 backdrop-blur"
+              className="mt-5 flex w-full items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur sm:mt-6 sm:inline-flex sm:w-auto sm:justify-start sm:gap-x-3 sm:gap-y-1 sm:rounded-2xl sm:px-5"
             >
-              <span className="text-sm font-medium text-white/85">
+              <span className="text-sm font-medium text-white/90 sm:text-white/85">
                 Exclusive Accommodation
               </span>
-              <span className="font-display text-2xl font-bold text-white">₱6,500</span>
-              <span className="text-sm text-white/75">/ night</span>
+              <span className="flex shrink-0 items-baseline gap-1 whitespace-nowrap">
+                <span className="font-display text-xl font-bold text-white sm:text-2xl">₱6,500</span>
+                <span className="text-xs text-white/75 sm:text-sm">/ night</span>
+              </span>
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.25 }}
-              className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
+              className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center"
             >
-              <Button size="lg" asChild className="rounded-[5px] px-7">
+              <Button
+                size="lg"
+                asChild
+                className="h-12 w-full justify-center rounded-[5px] px-6 text-base sm:h-11 sm:w-auto sm:px-7 sm:text-sm"
+              >
                 <Link to="/book">
                   <Calendar className="h-4 w-4" />
                   Book Your Stay
@@ -136,7 +145,7 @@ export function HeroSection() {
                 variant="outline"
                 size="lg"
                 asChild
-                className="rounded-[5px] border-white/40 bg-white/10 px-7 text-white backdrop-blur hover:bg-white/20 hover:text-white"
+                className="h-12 w-full justify-center rounded-[5px] border-white/40 bg-white/10 px-6 text-base text-white backdrop-blur hover:bg-white/20 hover:text-white sm:h-11 sm:w-auto sm:px-7 sm:text-sm"
               >
                 <a href="#rooms">View Accommodation</a>
               </Button>
@@ -150,8 +159,20 @@ export function HeroSection() {
             ))}
           </div>
 
-          {/* Mobile info cards (vertical) */}
-          <div className="flex flex-col gap-3 lg:hidden">
+          {/* Mobile info cards (horizontal scroll) */}
+          <div className="-mx-4 flex snap-x snap-proximity gap-3 overflow-x-auto overscroll-x-contain scroll-smooth scroll-px-4 px-4 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:hidden">
+            {HERO_INFO_CARDS.map((card, index) => (
+              <HeroInfoCard
+                key={card.title}
+                {...card}
+                delay={0.3 + index * 0.1}
+                className="w-[15rem] shrink-0 snap-start"
+              />
+            ))}
+          </div>
+
+          {/* Tablet info cards (vertical) */}
+          <div className="hidden flex-col gap-2.5 sm:flex lg:hidden">
             {HERO_INFO_CARDS.map((card, index) => (
               <HeroInfoCard key={card.title} {...card} delay={0.3 + index * 0.1} />
             ))}

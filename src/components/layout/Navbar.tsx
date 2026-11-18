@@ -181,29 +181,30 @@ export function Navbar() {
     <header className="fixed inset-x-0 top-0 z-50 print:hidden">
       <nav
         className={cn(
-          'mx-auto max-w-7xl px-4 transition-all duration-300 ease-out sm:px-6 lg:px-8',
+          'mx-auto max-w-7xl px-3 transition-all duration-300 ease-out sm:px-6 lg:px-8',
           scrolled ? 'mt-0' : 'mt-4',
         )}
       >
         <div
           className={cn(
-            'flex items-center justify-between px-4 transition-all duration-300 ease-out sm:px-5',
+            'flex items-center justify-between gap-2 px-3 transition-all duration-300 ease-out sm:px-5',
             scrolled
               ? 'h-16 rounded-2xl border border-border/70 bg-background/95 shadow-lg shadow-black/5 backdrop-blur-xl'
-              : 'h-20 rounded-2xl border border-white/10 bg-background/70 shadow-lg backdrop-blur-xl',
+              : 'h-[4.5rem] rounded-2xl border border-white/10 bg-background/70 shadow-lg backdrop-blur-xl sm:h-20',
           )}
         >
-          <Link to="/" className="group flex min-w-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 transition-transform duration-300 group-hover:scale-105">
-              <img src={BRAND_LOGO_URL} alt={BRAND_LOGO_ALT} className="h-9 w-9 object-cover" />
+          <Link to="/" className="group flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 transition-transform duration-300 group-hover:scale-105 sm:h-9 sm:w-9">
+              <img src={BRAND_LOGO_URL} alt={BRAND_LOGO_ALT} className="h-8 w-8 object-cover sm:h-9 sm:w-9" />
             </span>
             <span className="hidden font-display text-lg font-semibold tracking-tight sm:inline">
               {BRAND_NAME}
             </span>
           </Link>
           {isLanding && showPublicNav && (
-            <p className="flex-1 px-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-foreground/80 sm:text-sm lg:hidden">
-              The entire resort, exclusively yours
+            <p className="min-w-0 flex-1 px-1 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground/80 min-[380px]:px-2 min-[380px]:text-xs min-[380px]:tracking-[0.14em] sm:text-sm lg:hidden">
+              <span className="hidden min-[380px]:inline">The entire resort, exclusively yours</span>
+              <span className="min-[380px]:hidden">Exclusively yours</span>
             </p>
           )}
 
@@ -287,15 +288,19 @@ export function Navbar() {
             </div>
           )}
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {showPublicNav && (
-              <Button size="sm" onClick={() => setBookNowOpen(true)}>
+              <Button
+                size="sm"
+                className="h-10 whitespace-nowrap px-3 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                onClick={() => setBookNowOpen(true)}
+              >
                 Book now
               </Button>
             )}
             {showPublicNav && (
               <button
-                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
                 onClick={() => {
                   setMobileOpen(!mobileOpen)
                   if (mobileOpen) setOpenGroup(null)
