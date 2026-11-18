@@ -14,6 +14,7 @@ interface PickleballBookingRow {
   contact_number: string
   court_id: string
   booking_date: string
+  end_date: string
   start_time: string
   end_time: string
   duration_hours: number
@@ -26,6 +27,7 @@ interface PickleballBookingRow {
   check_in_at?: string | null
   check_out_at?: string | null
   notes: string | null
+  is_exclusive?: boolean | null
   created_at: string
   updated_at: string
 }
@@ -53,6 +55,7 @@ function rowToBooking(row: PickleballBookingRow): PickleballBooking {
     contactNumber: row.contact_number,
     courtId: row.court_id,
     bookingDate: row.booking_date,
+    endDate: row.end_date,
     startTime: row.start_time,
     endTime: row.end_time,
     players: row.players,
@@ -65,6 +68,7 @@ function rowToBooking(row: PickleballBookingRow): PickleballBooking {
     bookingSource: (row.booking_source as PickleballBooking['bookingSource']) ?? 'online',
     checkInAt: row.check_in_at ?? null,
     checkOutAt: row.check_out_at ?? null,
+    isExclusive: Boolean(row.is_exclusive),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -87,8 +91,7 @@ export async function listPickleballBookingsForRange(
   const { data, error } = await supabase
     .from('pickleball_bookings')
     .select('*')
-    .gte('booking_date', startDate)
-    .lte('booking_date', endDate)
+    .or(`and(booking_date.lte.${endDate},end_date.gte.${startDate})`)
     .order('booking_date', { ascending: true })
     .order('start_time', { ascending: true })
   if (error) throw new Error(mapPostgrestError(error))
@@ -116,10 +119,12 @@ export async function createPickleballBooking(
     p_email: input.email.trim(),
     p_contact_number: input.contactNumber.trim(),
     p_booking_date: input.bookingDate,
-    p_start_time: input.startTime,
-    p_end_time: input.endTime,
+    p_start_time: input.startTime ?? '00:00',
+    p_end_time: input.endTime ?? input.startTime ?? '23:59',
     p_players: Number(input.players),
     p_notes: input.notes?.trim() || null,
+    p_is_exclusive: Boolean(input.isExclusive),
+    p_end_date: input.endDate ?? null,
   })
   if (error) throw new Error(mapPostgrestError(error))
   if (!data) throw new Error('Unable to retrieve the new reservation.')

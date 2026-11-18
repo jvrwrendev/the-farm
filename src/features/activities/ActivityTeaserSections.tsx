@@ -86,6 +86,7 @@ function ActivitySection({
       : (activity?.weekdayRate ?? activity?.hourlyRate ?? 0)
 
   const unitCount = units.length > 0 ? units.length : (activity?.inventoryCount ?? 0)
+  const exclusiveEnabled = type === 'billiards' && Boolean(activity?.exclusiveEnabled && (activity?.exclusiveRate24h ?? 0) > 0)
 
   return (
     <section id={type} className="scroll-mt-28 px-4 py-20 sm:px-6 lg:py-24">
@@ -136,15 +137,22 @@ function ActivitySection({
                   : `table${unitCount === 1 ? '' : 's'}`}
               </span>
             )}
-            {activity && (
+            {activity && !exclusiveEnabled && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
                 <Clock className="h-3.5 w-3.5 text-primary" />
                 {formatTimeLabel(activity.openTime)} – {formatTimeLabel(activity.closeTime)}
               </span>
             )}
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
-              From {formatCurrency(rate)} / hour
-            </span>
+            {!exclusiveEnabled && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
+                From {formatCurrency(rate)} / hour
+              </span>
+            )}
+            {exclusiveEnabled && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-primary">
+                Exclusive 24 hrs · {formatCurrency(Number(activity?.exclusiveRate24h ?? 0))} / day
+              </span>
+            )}
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">

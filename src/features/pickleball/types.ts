@@ -19,6 +19,8 @@ export interface PickleballCourt {
   isActive: boolean
   openTime: string
   closeTime: string
+  exclusiveEnabled?: boolean
+  exclusiveRate24h?: number
 }
 
 export type PickleballGalleryCategory =
@@ -54,6 +56,7 @@ export interface PickleballBooking {
   contactNumber: string
   courtId: string
   bookingDate: string
+  endDate: string
   startTime: string
   endTime: string
   players: number
@@ -66,6 +69,7 @@ export interface PickleballBooking {
   bookingSource: 'online' | 'manual'
   checkInAt: string | null
   checkOutAt: string | null
+  isExclusive?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -74,13 +78,17 @@ export interface PickleballBookingInput {
   customerName: string
   email: string
   contactNumber: string
-  courtId: string
+  courtId?: string
   bookingDate: string
-  startTime: string
-  endTime: string
+  endDate?: string
+  startTime?: string
+  endTime?: string
   players: number
   notes?: string
+  isExclusive?: boolean
 }
+
+
 
 export interface PickleballTimeSlot {
   startTime: string

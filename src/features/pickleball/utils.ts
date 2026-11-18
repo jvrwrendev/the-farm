@@ -1,6 +1,33 @@
-import { format, parseISO } from 'date-fns'
+import { addHours, format, parseISO } from 'date-fns'
 import { PICKLEBALL_SETTINGS } from './mockData'
 import type { PickleballCourt, PickleballSettings, PickleballTimeSlot } from './types'
+
+export function getExclusive24hEnd(
+  startDate: string,
+  startTime: string,
+): { endDate: string; endTime: string } {
+  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    throw new Error('Invalid exclusive booking start date.')
+  }
+  if (!startTime || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) {
+    throw new Error('Invalid exclusive booking start time.')
+  }
+
+  const start = new Date(`${startDate}T${startTime}:00`)
+  if (Number.isNaN(start.getTime())) {
+    throw new Error('Invalid exclusive booking start date/time.')
+  }
+
+  const end = addHours(start, 24)
+  if (Number.isNaN(end.getTime())) {
+    throw new Error('Unable to calculate exclusive booking end time.')
+  }
+
+  return {
+    endDate: format(end, 'yyyy-MM-dd'),
+    endTime: format(end, 'HH:mm'),
+  }
+}
 
 export function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number)

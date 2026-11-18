@@ -80,9 +80,15 @@ export function PickleballCalendarPanel({
   const bookingsByDate = useMemo(() => {
     const map = new Map<string, PickleballBooking[]>()
     for (const booking of bookings) {
-      const list = map.get(booking.bookingDate)
-      if (list) list.push(booking)
-      else map.set(booking.bookingDate, [booking])
+      const dates = new Set<string>([booking.bookingDate])
+      if (booking.endDate && booking.endDate !== booking.bookingDate) {
+        dates.add(booking.endDate)
+      }
+      for (const date of dates) {
+        const list = map.get(date)
+        if (list) list.push(booking)
+        else map.set(date, [booking])
+      }
     }
     for (const list of map.values()) {
       list.sort(
@@ -104,7 +110,9 @@ export function PickleballCalendarPanel({
   const monthBookings = useMemo(
     () =>
       bookings.filter(
-        (booking) => booking.bookingDate >= monthStart && booking.bookingDate <= monthEnd,
+        (booking) =>
+          (booking.bookingDate >= monthStart && booking.bookingDate <= monthEnd) ||
+          (booking.endDate >= monthStart && booking.endDate <= monthEnd),
       ),
     [bookings, monthEnd, monthStart],
   )

@@ -157,15 +157,19 @@ export default function AdminPickleballDetailsPage() {
               <InfoRow icon={MapPin} label="Court" value={`${courtName} · ${courtType}`} />
               <InfoRow
                 icon={CalendarDays}
-                label="Booking date"
-                value={formatBookingDate(booking.bookingDate, 'EEEE, MMM d, yyyy')}
+                label={booking.isExclusive ? 'Booking dates' : 'Booking date'}
+                value={
+                  booking.isExclusive
+                    ? `${formatBookingDate(booking.bookingDate, 'EEE, MMM d')} – ${formatBookingDate(booking.endDate, 'EEE, MMM d, yyyy')}`
+                    : formatBookingDate(booking.bookingDate, 'EEEE, MMM d, yyyy')
+                }
               />
               <InfoRow
                 icon={Clock}
                 label="Time"
                 value={`${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(
                   booking.endTime,
-                )}`}
+                )}${booking.isExclusive ? ' (+1 day)' : ''}`}
               />
               <InfoRow
                 icon={Clock}

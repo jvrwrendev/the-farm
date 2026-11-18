@@ -122,6 +122,8 @@ interface TypeForm {
   weekdayRate: number
   weekendRate: number
   hourlyRate: number
+  exclusiveEnabled: boolean
+  exclusiveRate24h: number
 }
 
 type UnitForm = ActivityUnitInput
@@ -204,6 +206,8 @@ function AdminActivityTab({
     weekdayRate: 0,
     weekendRate: 0,
     hourlyRate: 0,
+    exclusiveEnabled: false,
+    exclusiveRate24h: 0,
   })
   const [savingType, setSavingType] = useState(false)
   const [uploadingTypeImage, setUploadingTypeImage] = useState(false)
@@ -234,6 +238,8 @@ function AdminActivityTab({
       weekdayRate: activity.weekdayRate,
       weekendRate: activity.weekendRate,
       hourlyRate: activity.hourlyRate,
+      exclusiveEnabled: Boolean(activity.exclusiveEnabled),
+      exclusiveRate24h: Number(activity.exclusiveRate24h ?? 0),
     })
   }, [activity])
 
@@ -303,6 +309,8 @@ function AdminActivityTab({
         hourlyRate: typeForm.hourlyRate,
         inventoryCount: Math.max(1, units.length),
         maxPlayers: Math.max(1, ...units.map((u) => u.maxPlayers), 1),
+        exclusiveEnabled: type === 'billiards' ? typeForm.exclusiveEnabled : false,
+        exclusiveRate24h: type === 'billiards' ? Number(typeForm.exclusiveRate24h || 0) : 0,
       }
       if (activity) {
         await updateActivity(activity.id, payload)
@@ -549,31 +557,62 @@ function AdminActivityTab({
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Default weekday rate</Label>
-              <Input type="number" min={0} value={typeForm.weekdayRate} onChange={(e) => setTypeForm((p) => ({ ...p, weekdayRate: Number(e.target.value) }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Default weekend rate</Label>
-              <Input type="number" min={0} value={typeForm.weekendRate} onChange={(e) => setTypeForm((p) => ({ ...p, weekendRate: Number(e.target.value) }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Opening time</Label>
-              <TimePicker12h value={typeForm.openTime} onChange={(v) => setTypeForm((p) => ({ ...p, openTime: v }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Closing time</Label>
-              <TimePicker12h value={typeForm.closeTime} onChange={(v) => setTypeForm((p) => ({ ...p, closeTime: v }))} />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={typeForm.isAvailable} onChange={(e) => setTypeForm((p) => ({ ...p, isAvailable: e.target.checked }))} />
-              Available for booking
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={typeForm.isActive} onChange={(e) => setTypeForm((p) => ({ ...p, isActive: e.target.checked }))} />
-              Visible on public site
-            </label>
+            {!(type === 'billiards' && typeForm.exclusiveEnabled) && (
+              <>
+                <div className="space-y-2">
+                  <Label>Default weekday rate</Label>
+                  <Input type="number" min={0} value={typeForm.weekdayRate} onChange={(e) => setTypeForm((p) => ({ ...p, weekdayRate: Number(e.target.value) }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Default weekend rate</Label>
+                  <Input type="number" min={0} value={typeForm.weekendRate} onChange={(e) => setTypeForm((p) => ({ ...p, weekendRate: Number(e.target.value) }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Opening time</Label>
+                  <TimePicker12h value={typeForm.openTime} onChange={(v) => setTypeForm((p) => ({ ...p, openTime: v }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Closing time</Label>
+                  <TimePicker12h value={typeForm.closeTime} onChange={(v) => setTypeForm((p) => ({ ...p, closeTime: v }))} />
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={typeForm.isAvailable} onChange={(e) => setTypeForm((p) => ({ ...p, isAvailable: e.target.checked }))} />
+                  Available for booking
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={typeForm.isActive} onChange={(e) => setTypeForm((p) => ({ ...p, isActive: e.target.checked }))} />
+                  Visible on public site
+                </label>
+              </>
+            )}
           </div>
+
+          {type === 'billiards' && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
+              <div>
+                <p className="font-semibold">Exclusive 24 Hours (Entire Facility)</p>
+                <p className="text-xs text-muted-foreground">Allow customers/admins to reserve all billiard tables for a full day (24 hours).</p>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={typeForm.exclusiveEnabled}
+                  onChange={(e) => setTypeForm((p) => ({ ...p, exclusiveEnabled: e.target.checked }))}
+                />
+                Enable Exclusive 24-hour booking
+              </label>
+              <div className="max-w-xs space-y-2">
+                <Label>Exclusive 24-hour rate</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={typeForm.exclusiveRate24h}
+                  onChange={(e) => setTypeForm((p) => ({ ...p, exclusiveRate24h: Number(e.target.value) }))}
+                  disabled={!typeForm.exclusiveEnabled}
+                />
+              </div>
+            </div>
+          )}
           <div className="flex justify-end">
             <Button onClick={saveType} loading={savingType} disabled={uploadingTypeImage}>
               Save settings

@@ -45,8 +45,13 @@ export async function downloadPickleballSummaryPdf(
   row('Email', booking.email)
   row('Contact number', booking.contactNumber)
   row('Court', court.name)
-  row('Date', formatBookingDate(booking.bookingDate, 'EEEE, MMMM d, yyyy'))
-  row('Time', `${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(booking.endTime)}`)
+  if (booking.isExclusive) {
+    row('Date', `${formatBookingDate(booking.bookingDate, 'EEE, MMM d')} – ${formatBookingDate(booking.endDate, 'EEE, MMM d, yyyy')}`)
+    row('Time', `${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(booking.endTime)} (+1 day)`)
+  } else {
+    row('Date', formatBookingDate(booking.bookingDate, 'EEEE, MMMM d, yyyy'))
+    row('Time', `${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(booking.endTime)}`)
+  }
   row('Duration', `${booking.durationHours} hour${booking.durationHours === 1 ? '' : 's'}`)
   row('Players', String(booking.players))
   row('Hourly rate', PDF_CURRENCY(booking.hourlyRate))

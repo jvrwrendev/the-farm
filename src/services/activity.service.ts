@@ -29,6 +29,8 @@ interface ActivityRow {
   is_active: boolean
   open_time: string
   close_time: string
+  exclusive_enabled?: boolean | null
+  exclusive_rate_24h?: number | string | null
   created_at: string
   updated_at: string
 }
@@ -73,6 +75,7 @@ interface ActivityBookingRow {
   check_in_at?: string | null
   check_out_at?: string | null
   notes: string | null
+  is_exclusive?: boolean | null
   created_at: string
   updated_at: string
   activity: ActivityRow | ActivityRow[] | null
@@ -95,6 +98,8 @@ function rowToActivity(row: ActivityRow): Activity {
     isActive: row.is_active,
     openTime: row.open_time,
     closeTime: row.close_time,
+    exclusiveEnabled: Boolean(row.exclusive_enabled),
+    exclusiveRate24h: Number(row.exclusive_rate_24h ?? 0),
   }
 }
 
@@ -122,6 +127,7 @@ function rowToBooking(row: ActivityBookingRow): ActivityBooking {
   const activityRate = activity ? Number(activity.weekday_rate) : 0
   const duration = Number(row.duration_hours) || 1
   const quantity = Number(row.quantity) || 1
+  const isExclusive = Boolean(row.is_exclusive)
   return {
     id: row.id,
     reference: row.reference,
@@ -132,7 +138,7 @@ function rowToBooking(row: ActivityBookingRow): ActivityBooking {
     activityType: activity?.type ?? 'billiards',
     activityName: activity?.name ?? 'Activity',
     unitId: row.unit_id ?? null,
-    unitName: unit?.name ?? (quantity > 1 ? `${quantity} units` : '—'),
+    unitName: isExclusive ? 'Exclusive (all tables)' : (unit?.name ?? (quantity > 1 ? `${quantity} units` : '—')),
     bookingDate: row.booking_date,
     startTime: row.start_time,
     endTime: row.end_time,
@@ -151,6 +157,7 @@ function rowToBooking(row: ActivityBookingRow): ActivityBooking {
     checkInAt: row.check_in_at ?? null,
     checkOutAt: row.check_out_at ?? null,
     notes: row.notes ?? '',
+    isExclusive,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -196,6 +203,8 @@ export async function createActivity(input: ActivityInput): Promise<Activity> {
       is_active: input.isActive,
       open_time: input.openTime,
       close_time: input.closeTime,
+      exclusive_enabled: input.exclusiveEnabled ?? false,
+      exclusive_rate_24h: input.exclusiveRate24h ?? 0,
     })
     .select('*')
     .single()
@@ -221,6 +230,8 @@ export async function updateActivity(
   if (input.isActive !== undefined) patch.is_active = input.isActive
   if (input.openTime !== undefined) patch.open_time = input.openTime
   if (input.closeTime !== undefined) patch.close_time = input.closeTime
+  if (input.exclusiveEnabled !== undefined) patch.exclusive_enabled = input.exclusiveEnabled
+  if (input.exclusiveRate24h !== undefined) patch.exclusive_rate_24h = input.exclusiveRate24h
 
   const { data, error } = await supabase
     .from('activities')
@@ -338,12 +349,34 @@ export async function listUnitBookingsForDate(
   return (data ?? []).map((r) => rowToBooking(r as ActivityBookingRow))
 }
 
+export async function hasExclusiveActivityBooking(
+  activityId: string,
+  bookingDate: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('activity_bookings')
+    .select('id')
+    .eq('activity_id', activityId)
+    .eq('booking_date', bookingDate)
+    .eq('is_exclusive', true)
+    .in('status', ['pending', 'confirmed', 'checked_in', 'completed'])
+    .limit(1)
+  if (error) throw new Error(mapPostgrestError(error))
+  return (data ?? []).length > 0
+}
+
 export async function isUnitRangeAvailable(
   unitId: string,
   bookingDate: string,
   startTime: string,
   endTime: string,
 ): Promise<boolean> {
+  // If this unit belongs to an activity with an exclusive booking that day, block.
+  const { data: unitRow } = await supabase.from('activity_units').select('activity_type').eq('id', unitId).maybeSingle()
+  if (unitRow) {
+    const { data: activityRow } = await supabase.from('activities').select('id').eq('type', (unitRow as { activity_type: string }).activity_type).maybeSingle()
+    if (activityRow && await hasExclusiveActivityBooking((activityRow as { id: string }).id, bookingDate)) return false
+  }
   const bookings = await listUnitBookingsForDate(unitId, bookingDate)
   return !bookings.some(
     (booking) => startTime < booking.endTime && endTime > booking.startTime,
@@ -398,7 +431,7 @@ export async function listBookingsForActivityDate(
     .select('*, activity:activities(*), unit:activity_units(*)')
     .eq('activity_id', activityId)
     .eq('booking_date', bookingDate)
-    .in('status', ['pending', 'confirmed', 'completed'])
+    .in('status', ['pending', 'confirmed', 'checked_in', 'completed'])
   if (error) throw new Error(mapPostgrestError(error))
   return (data ?? []).map((r) => rowToBooking(r as ActivityBookingRow))
 }
@@ -437,6 +470,7 @@ export async function getAvailableActivityInventory(
     listBookingsForActivityDate(activityId, bookingDate),
   ])
   if (!activity) return 0
+  if (bookings.some((b) => b.isExclusive)) return 0
   return Math.max(
     0,
     activity.inventoryCount - getPeakActivityInventory(bookings, startTime, endTime),
@@ -467,42 +501,56 @@ export async function createActivityBooking(
   if (!activity.isActive || !activity.isAvailable) {
     throw new Error('This activity is not currently available for booking.')
   }
-  if (input.endTime <= input.startTime) {
-    throw new Error('End time must be after start time.')
-  }
-  if (input.startTime < activity.openTime || input.endTime > activity.closeTime) {
-    throw new Error(
-      `Bookings are available from ${activity.openTime} to ${activity.closeTime}.`,
-    )
-  }
 
-  if (input.unitId) {
-    const available = await isUnitRangeAvailable(
-      input.unitId,
-      input.bookingDate,
-      input.startTime,
-      input.endTime,
-    )
-    if (!available) {
-      throw new Error('That unit or table is already booked for the selected time.')
+  if (input.isExclusive) {
+    if (activity.type !== 'billiards') throw new Error('Exclusive booking is only available for Billiards.')
+    if (!activity.exclusiveEnabled || (activity.exclusiveRate24h ?? 0) <= 0) {
+      throw new Error('Exclusive 24-hour booking is not currently available.')
+    }
+    if (await hasExclusiveActivityBooking(activity.id, input.bookingDate)) {
+      throw new Error('This date is already reserved for an exclusive booking.')
     }
   } else {
-    if (input.quantity < 1 || input.quantity > activity.inventoryCount) {
-      throw new Error(`You can reserve up to ${activity.inventoryCount} at a time.`)
+    if (input.endTime <= input.startTime) {
+      throw new Error('End time must be after start time.')
     }
-    const participantCapacity = activity.maxPlayers * input.quantity
-    if (input.players < 1 || input.players > participantCapacity) {
-      throw new Error(`The selected quantity hosts up to ${participantCapacity} participants.`)
+    if (input.startTime < activity.openTime || input.endTime > activity.closeTime) {
+      throw new Error(
+        `Bookings are available from ${activity.openTime} to ${activity.closeTime}.`,
+      )
     }
-    const available = await isActivityRangeAvailable(
-      input.activityId,
-      input.bookingDate,
-      input.startTime,
-      input.endTime,
-      input.quantity,
-    )
-    if (!available) {
-      throw new Error('Not enough units are available for that time slot.')
+    if (await hasExclusiveActivityBooking(activity.id, input.bookingDate)) {
+      throw new Error('This date is reserved for an exclusive booking.')
+    }
+
+    if (input.unitId) {
+      const available = await isUnitRangeAvailable(
+        input.unitId,
+        input.bookingDate,
+        input.startTime,
+        input.endTime,
+      )
+      if (!available) {
+        throw new Error('That unit or table is already booked for the selected time.')
+      }
+    } else {
+      if (input.quantity < 1 || input.quantity > activity.inventoryCount) {
+        throw new Error(`You can reserve up to ${activity.inventoryCount} at a time.`)
+      }
+      const participantCapacity = activity.maxPlayers * input.quantity
+      if (input.players < 1 || input.players > participantCapacity) {
+        throw new Error(`The selected quantity hosts up to ${participantCapacity} participants.`)
+      }
+      const available = await isActivityRangeAvailable(
+        input.activityId,
+        input.bookingDate,
+        input.startTime,
+        input.endTime,
+        input.quantity,
+      )
+      if (!available) {
+        throw new Error('Not enough units are available for that time slot.')
+      }
     }
   }
 
@@ -512,13 +560,14 @@ export async function createActivityBooking(
     p_email: input.email.trim(),
     p_contact_number: input.contactNumber.trim(),
     p_booking_date: input.bookingDate,
-    p_start_time: input.startTime,
-    p_end_time: input.endTime,
-    p_duration_hours: input.durationHours,
+    p_start_time: input.isExclusive ? '00:00' : input.startTime,
+    p_end_time: input.isExclusive ? '23:59' : input.endTime,
+    p_duration_hours: input.isExclusive ? 24 : input.durationHours,
     p_players: input.players,
     p_quantity: input.quantity || 1,
     p_notes: input.notes?.trim() || null,
-    p_unit_id: input.unitId ?? null,
+    p_unit_id: input.isExclusive ? null : (input.unitId ?? null),
+    p_is_exclusive: Boolean(input.isExclusive),
   })
   if (error) throw new Error(mapPostgrestError(error))
 

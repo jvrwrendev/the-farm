@@ -21,6 +21,8 @@ interface CourtRow {
   is_active: boolean
   open_time: string
   close_time: string
+  exclusive_enabled?: boolean | null
+  exclusive_rate_24h?: number | string | null
   created_at: string
   updated_at: string
 }
@@ -43,6 +45,8 @@ function rowToCourt(row: CourtRow): PickleballCourt {
     isActive: row.is_active,
     openTime: row.open_time,
     closeTime: row.close_time,
+    exclusiveEnabled: Boolean(row.exclusive_enabled),
+    exclusiveRate24h: Number(row.exclusive_rate_24h ?? 0),
   }
 }
 
@@ -81,6 +85,8 @@ export interface CourtInput {
   isActive: boolean
   openTime: string
   closeTime: string
+  exclusiveEnabled?: boolean
+  exclusiveRate24h?: number
 }
 
 export async function createPickleballCourt(input: CourtInput): Promise<PickleballCourt> {
@@ -102,6 +108,8 @@ export async function createPickleballCourt(input: CourtInput): Promise<Pickleba
       is_active: input.isActive,
       open_time: input.openTime,
       close_time: input.closeTime,
+      exclusive_enabled: input.exclusiveEnabled ?? false,
+      exclusive_rate_24h: input.exclusiveRate24h ?? 0,
     })
     .select('*')
     .single()
@@ -126,6 +134,8 @@ export async function updatePickleballCourt(id: string, input: Partial<CourtInpu
   if (input.isActive !== undefined) patch.is_active = input.isActive
   if (input.openTime !== undefined) patch.open_time = input.openTime
   if (input.closeTime !== undefined) patch.close_time = input.closeTime
+  if (input.exclusiveEnabled !== undefined) patch.exclusive_enabled = input.exclusiveEnabled
+  if (input.exclusiveRate24h !== undefined) patch.exclusive_rate_24h = input.exclusiveRate24h
 
   const { data, error } = await supabase
     .from('pickleball_courts')

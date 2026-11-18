@@ -21,6 +21,8 @@ export interface Activity {
   isActive: boolean
   openTime: string
   closeTime: string
+  exclusiveEnabled?: boolean
+  exclusiveRate24h?: number
 }
 
 export interface ActivityUnit {
@@ -64,6 +66,7 @@ export interface ActivityBooking {
   checkInAt: string | null
   checkOutAt: string | null
   notes: string
+  isExclusive?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -81,6 +84,7 @@ export interface ActivityBookingInput {
   quantity: number
   players: number
   notes?: string
+  isExclusive?: boolean
 }
 
 export interface ActivityInput {
@@ -97,6 +101,8 @@ export interface ActivityInput {
   isActive: boolean
   openTime: string
   closeTime: string
+  exclusiveEnabled?: boolean
+  exclusiveRate24h?: number
 }
 
 export interface ActivityUnitInput {

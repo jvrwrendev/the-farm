@@ -11,6 +11,8 @@ import { scrollToLandingSection } from '@/lib/scroll'
 
 export function PickleballTeaserSection() {
   const courts = usePickleballCourts()
+  const exclusiveCourts = courts.filter((c) => c.exclusiveEnabled && (c.exclusiveRate24h ?? 0) > 0)
+  const lowestExclusiveRate = exclusiveCourts.length > 0 ? Math.min(...exclusiveCourts.map((c) => Number(c.exclusiveRate24h ?? 0))) : 0
   const lowestRate = courts.length
     ? Math.min(...courts.map((court) => court.weekdayRate || court.hourlyRate))
     : 0
@@ -83,6 +85,11 @@ export function PickleballTeaserSection() {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1.5">
               From {formatCurrency(lowestRate)} / hour
             </span>
+            {exclusiveCourts.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/20 px-3 py-1.5 text-amber-50">
+                Court exclusive 24 hrs from {formatCurrency(lowestExclusiveRate)} / day
+              </span>
+            )}
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
