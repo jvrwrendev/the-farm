@@ -7,23 +7,18 @@ import { getActiveImages } from '@/features/admin/imageStorage'
 import { MOCK_GALLERY } from '@/features/landing/mockContent'
 import type { GalleryItem } from '@/types'
 
-type TileSize = 'cover' | 'tall' | 'wide' | 'square'
+const TILE_ASPECTS = [
+  'aspect-[4/5]',
+  'aspect-square',
+  'aspect-[4/3]',
+  'aspect-[3/4]',
+  'aspect-[5/4]',
+  'aspect-square',
+] as const
 
-function tileSizeFor(i: number, total: number, isCover: boolean): TileSize {
-  if (isCover) return 'cover'
-  const remainder = total - 1
-  if (remainder <= 0) return 'square'
-  const r = i % remainder
-  if (r === 0) return 'tall'
-  if (r === 3) return 'wide'
-  return 'square'
-}
-
-const TILE_CLASS: Record<TileSize, string> = {
-  cover: 'col-span-2 row-span-2 aspect-square md:aspect-auto md:col-span-2 md:row-span-2',
-  tall: 'col-span-1 row-span-2 aspect-[1/2] md:aspect-auto md:row-span-2',
-  wide: 'col-span-2 row-span-1 aspect-[2/1] md:aspect-auto md:col-span-2 md:row-span-1',
-  square: 'col-span-1 row-span-1 aspect-square',
+function tileAspectClass(index: number, isCover: boolean): string {
+  if (isCover) return 'aspect-[4/3]'
+  return TILE_ASPECTS[index % TILE_ASPECTS.length]
 }
 
 export function GallerySection() {
@@ -80,9 +75,9 @@ export function GallerySection() {
             No photos yet. Add images in Admin → Image Management to populate the gallery.
           </div>
         ) : (
-          <div className="grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-3 md:auto-rows-[200px] lg:grid-cols-4 lg:auto-rows-[220px]">
+          <div className="columns-1 gap-x-3 [column-fill:balance] sm:columns-2 lg:columns-3 xl:columns-4">
             {gallery.map((item, i) => {
-              const size = tileSizeFor(i, gallery.length, !!item.is_cover)
+              const aspectClass = tileAspectClass(i, !!item.is_cover)
               return (
                 <motion.button
                   key={item.id}
@@ -93,12 +88,12 @@ export function GallerySection() {
                   transition={{ delay: i * 0.04, duration: 0.4 }}
                   onClick={() => setLightbox(i)}
                   aria-label={`Open photo: ${item.alt_text || item.title}`}
-                  className={`group relative overflow-hidden rounded-xl bg-muted ring-1 ring-black/5 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${TILE_CLASS[size]}`}
+                  className={`group relative mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl bg-muted ring-1 ring-black/5 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${aspectClass}`}
                 >
                   <img
                     src={item.image_url}
                     alt={item.alt_text || item.title}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading={i < 2 ? 'eager' : 'lazy'}
                     decoding="async"
                   />
