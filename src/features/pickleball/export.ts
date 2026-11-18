@@ -44,8 +44,17 @@ export async function downloadPickleballSummaryPdf(
   row('Customer', booking.customerName)
   row('Email', booking.email)
   row('Contact number', booking.contactNumber)
-  row('Court', court.name)
-  if (booking.isExclusive) {
+  const isFacilityDayExclusive =
+    Boolean(booking.isExclusive) &&
+    booking.endDate === booking.bookingDate &&
+    booking.startTime === '00:00' &&
+    booking.endTime === '23:59'
+
+  row('Court', isFacilityDayExclusive ? 'All pickleball courts (Entire facility)' : court.name)
+  if (isFacilityDayExclusive) {
+    row('Date', formatBookingDate(booking.bookingDate, 'EEEE, MMMM d, yyyy'))
+    row('Time', '12:00 AM – 11:59 PM (Full day)')
+  } else if (booking.isExclusive) {
     row('Date', `${formatBookingDate(booking.bookingDate, 'EEE, MMM d')} – ${formatBookingDate(booking.endDate, 'EEE, MMM d, yyyy')}`)
     row('Time', `${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(booking.endTime)} (+1 day)`)
   } else {

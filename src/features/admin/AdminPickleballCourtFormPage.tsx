@@ -34,8 +34,6 @@ const emptyForm: CourtInput = {
   isActive: true,
   openTime: '07:00',
   closeTime: '21:00',
-  exclusiveEnabled: false,
-  exclusiveRate24h: 0,
 }
 
 export default function AdminPickleballCourtFormPage() {
@@ -80,8 +78,6 @@ export default function AdminPickleballCourtFormPage() {
           isActive: court.isActive,
           openTime: court.openTime,
           closeTime: court.closeTime,
-          exclusiveEnabled: Boolean(court.exclusiveEnabled),
-          exclusiveRate24h: Number(court.exclusiveRate24h ?? 0),
         })
         setImagePreview(court.imageUrl)
       })
@@ -141,12 +137,14 @@ export default function AdminPickleballCourtFormPage() {
           setUploadingImage(false)
         }
       }
-      const payload = { ...form, imageUrl }
+      const { exclusiveEnabled: _exclusiveEnabled, exclusiveRate24h: _exclusiveRate24h, ...courtPayload } = { ...form, imageUrl }
+      void _exclusiveEnabled
+      void _exclusiveRate24h
       if (courtId) {
-        await updatePickleballCourt(courtId, payload)
+        await updatePickleballCourt(courtId, courtPayload)
         toast.success('Court updated.')
       } else {
-        await createPickleballCourt(payload)
+        await createPickleballCourt(courtPayload)
         toast.success('Court created.')
       }
       navigate('/admin/pickleball-courts')
@@ -156,8 +154,6 @@ export default function AdminPickleballCourtFormPage() {
       setSaving(false)
     }
   }
-
-  const exclusiveEnabled = Boolean(form.exclusiveEnabled)
 
   if (loading) {
     return (
@@ -210,103 +206,60 @@ export default function AdminPickleballCourtFormPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
-              <div>
-                <h2 className="font-display text-lg font-semibold">Exclusive 24 Hours (This Court)</h2>
-                <p className="text-sm text-muted-foreground">Allow customers/admins to reserve this specific court exclusively for a full day (24 hours). Other courts remain available.</p>
-              </div>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={exclusiveEnabled}
-                  onChange={(e) => setForm((f) => ({ ...f, exclusiveEnabled: e.target.checked }))}
-                  className="h-4 w-4 rounded border-input"
-                />
-                Enable court-exclusive 24-hour booking
-              </label>
-              <div className="max-w-xs space-y-1.5">
-                <Label htmlFor="exclusiveRate24h">Exclusive 24-hour rate</Label>
-                <Input
-                  id="exclusiveRate24h"
-                  type="number"
-                  min={0}
-                  value={form.exclusiveRate24h ?? 0}
-                  onChange={(e) => setForm((f) => ({ ...f, exclusiveRate24h: Number(e.target.value) }))}
-                  disabled={!exclusiveEnabled}
-                />
+            <section className="rounded-xl border bg-card/50 p-5">
+              <h2 className="font-display mb-4 text-lg font-semibold border-b pb-3">Pricing</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="hourlyRate">Hourly rate</Label>
+                  <Input id="hourlyRate" type="number" value={form.hourlyRate} onChange={(e) => setForm((f) => ({ ...f, hourlyRate: Number(e.target.value) }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="weekdayRate">Weekday rate</Label>
+                  <Input id="weekdayRate" type="number" value={form.weekdayRate} onChange={(e) => setForm((f) => ({ ...f, weekdayRate: Number(e.target.value) }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="weekendRate">Weekend rate</Label>
+                  <Input id="weekendRate" type="number" value={form.weekendRate} onChange={(e) => setForm((f) => ({ ...f, weekendRate: Number(e.target.value) }))} />
+                </div>
               </div>
             </section>
 
-            {exclusiveEnabled ? (
-              <section className="rounded-xl border bg-card/50 p-5">
-                <h2 className="font-display mb-4 text-lg font-semibold border-b pb-3">Court details</h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="surface">Surface</Label>
-                    <Input id="surface" value={form.surface} onChange={(e) => setForm((f) => ({ ...f, surface: e.target.value }))} placeholder="Concrete / Asphalt" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="maxPlayers">Max players</Label>
-                    <Input id="maxPlayers" type="number" value={form.maxPlayers} onChange={(e) => setForm((f) => ({ ...f, maxPlayers: Number(e.target.value) }))} />
-                  </div>
+            <section className="rounded-xl border bg-card/50 p-5">
+              <h2 className="font-display mb-4 text-lg font-semibold border-b pb-3">Details & availability</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="surface">Surface</Label>
+                  <Input id="surface" value={form.surface} onChange={(e) => setForm((f) => ({ ...f, surface: e.target.value }))} placeholder="Concrete / Asphalt" />
                 </div>
-              </section>
-            ) : (
-              <>
-                <section className="rounded-xl border bg-card/50 p-5">
-                  <h2 className="font-display mb-4 text-lg font-semibold border-b pb-3">Pricing</h2>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="hourlyRate">Hourly rate</Label>
-                      <Input id="hourlyRate" type="number" value={form.hourlyRate} onChange={(e) => setForm((f) => ({ ...f, hourlyRate: Number(e.target.value) }))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="weekdayRate">Weekday rate</Label>
-                      <Input id="weekdayRate" type="number" value={form.weekdayRate} onChange={(e) => setForm((f) => ({ ...f, weekdayRate: Number(e.target.value) }))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="weekendRate">Weekend rate</Label>
-                      <Input id="weekendRate" type="number" value={form.weekendRate} onChange={(e) => setForm((f) => ({ ...f, weekendRate: Number(e.target.value) }))} />
-                    </div>
-                  </div>
-                </section>
+                <div className="space-y-1.5">
+                  <Label htmlFor="maxPlayers">Max players</Label>
+                  <Input id="maxPlayers" type="number" value={form.maxPlayers} onChange={(e) => setForm((f) => ({ ...f, maxPlayers: Number(e.target.value) }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="openTime">Open time</Label>
+                  <TimePicker12h value={form.openTime} onChange={(v) => setForm((f) => ({ ...f, openTime: v }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="closeTime">Close time</Label>
+                  <TimePicker12h value={form.closeTime} onChange={(v) => setForm((f) => ({ ...f, closeTime: v }))} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input id="isCovered" type="checkbox" checked={form.isCovered} onChange={(e) => setForm((f) => ({ ...f, isCovered: e.target.checked }))} className="h-4 w-4 rounded border-input" />
+                  <Label htmlFor="isCovered">Covered</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input id="isAvailable" type="checkbox" checked={form.isAvailable} onChange={(e) => setForm((f) => ({ ...f, isAvailable: e.target.checked }))} className="h-4 w-4 rounded border-input" />
+                  <Label htmlFor="isAvailable">Available</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input id="isActive" type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} className="h-4 w-4 rounded border-input" />
+                  <Label htmlFor="isActive">Active</Label>
+                </div>
+              </div>
+            </section>
 
-                <section className="rounded-xl border bg-card/50 p-5">
-                  <h2 className="font-display mb-4 text-lg font-semibold border-b pb-3">Details & availability</h2>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="surface">Surface</Label>
-                      <Input id="surface" value={form.surface} onChange={(e) => setForm((f) => ({ ...f, surface: e.target.value }))} placeholder="Concrete / Asphalt" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="maxPlayers">Max players</Label>
-                      <Input id="maxPlayers" type="number" value={form.maxPlayers} onChange={(e) => setForm((f) => ({ ...f, maxPlayers: Number(e.target.value) }))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="openTime">Open time</Label>
-                      <TimePicker12h value={form.openTime} onChange={(v) => setForm((f) => ({ ...f, openTime: v }))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="closeTime">Close time</Label>
-                      <TimePicker12h value={form.closeTime} onChange={(v) => setForm((f) => ({ ...f, closeTime: v }))} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input id="isCovered" type="checkbox" checked={form.isCovered} onChange={(e) => setForm((f) => ({ ...f, isCovered: e.target.checked }))} className="h-4 w-4 rounded border-input" />
-                      <Label htmlFor="isCovered">Covered</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input id="isAvailable" type="checkbox" checked={form.isAvailable} onChange={(e) => setForm((f) => ({ ...f, isAvailable: e.target.checked }))} className="h-4 w-4 rounded border-input" />
-                      <Label htmlFor="isAvailable">Available</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input id="isActive" type="checkbox" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} className="h-4 w-4 rounded border-input" />
-                      <Label htmlFor="isActive">Active</Label>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="rounded-xl border bg-card/50 p-5">
-                  <h2 className="font-display mb-4 text-lg font-semibold border-b pb-3">Amenities</h2>
+            <section className="rounded-xl border bg-card/50 p-5">
+              <h2 className="font-display mb-4 text-lg font-semibold border-b pb-3">Amenities</h2>
               <div className="flex gap-2">
                 <Input value={amenityInput} onChange={(e) => setAmenityInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAmenity() } }} placeholder="Add amenity and press Enter" />
                 <Button type="button" onClick={addAmenity}>Add</Button>
@@ -322,8 +275,6 @@ export default function AdminPickleballCourtFormPage() {
                 ))}
               </div>
             </section>
-          </>
-        )}
       </div>
 
       <div className="lg:col-span-1">

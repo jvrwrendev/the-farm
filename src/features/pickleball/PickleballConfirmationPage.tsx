@@ -95,6 +95,12 @@ export default function PickleballConfirmationPage() {
   })
 
   const court = booking ? courts.find((item) => item.id === booking.courtId) : undefined
+  const isFacilityDayExclusive = Boolean(
+    booking?.isExclusive &&
+      booking.endDate === booking.bookingDate &&
+      booking.startTime === '00:00' &&
+      booking.endTime === '23:59',
+  )
 
   const handleDownload = async () => {
     if (!booking || !court) return
@@ -156,7 +162,7 @@ export default function PickleballConfirmationPage() {
                 <CheckCircle2 className="h-9 w-9" />
               </span>
               <h1 className="font-display mt-5 text-3xl font-bold sm:text-4xl">
-                You’re on the court!
+                {isFacilityDayExclusive ? 'Exclusive booking received!' : 'You’re on the court!'}
               </h1>
               <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
                 Your pickleball reservation has been received. Our team will confirm it shortly.
@@ -181,7 +187,7 @@ export default function PickleballConfirmationPage() {
                   <div>
                     <CardTitle className="font-display text-xl">Reservation summary</CardTitle>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {court?.name ?? 'Pickleball court'} · {formatBookingDate(booking.bookingDate)}
+                      {isFacilityDayExclusive ? 'All pickleball courts (Exclusive 24 Hours)' : (court?.name ?? 'Pickleball court')} · {formatBookingDate(booking.bookingDate)}
                     </p>
                   </div>
                   <Badge variant={STATUS_VARIANTS[booking.status]}>
@@ -197,8 +203,12 @@ export default function PickleballConfirmationPage() {
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <DetailRow
                       icon={MapPin}
-                      label="Court"
-                      value={`${court?.name ?? 'Pickleball court'}${court?.isCovered ? ' (Covered)' : ''}`}
+                      label={isFacilityDayExclusive ? 'Facility' : 'Court'}
+                      value={
+                        isFacilityDayExclusive
+                          ? 'All pickleball courts (Entire facility)'
+                          : `${court?.name ?? 'Pickleball court'}${court?.isCovered ? ' (Covered)' : ''}`
+                      }
                     />
                     <DetailRow
                       icon={CalendarDays}
@@ -208,7 +218,11 @@ export default function PickleballConfirmationPage() {
                     <DetailRow
                       icon={Clock}
                       label="Time"
-                      value={`${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(booking.endTime)}`}
+                      value={
+                        isFacilityDayExclusive
+                          ? '12:00 AM – 11:59 PM (Full day)'
+                          : `${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(booking.endTime)}`
+                      }
                     />
                     <DetailRow
                       icon={Users}

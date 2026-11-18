@@ -250,6 +250,11 @@ export default function AdminPickleballPage() {
               ) : (
                 filteredBookings.map((booking) => {
                   const court = courts.find((item) => item.id === booking.courtId)
+                  const isFacilityDayExclusive =
+                    Boolean(booking.isExclusive) &&
+                    booking.endDate === booking.bookingDate &&
+                    booking.startTime === '00:00' &&
+                    booking.endTime === '23:59'
                   return (
                     <TableRow key={booking.id}>
                       <TableCell className="font-mono text-xs font-medium">
@@ -264,23 +269,32 @@ export default function AdminPickleballPage() {
                           <span
                             className={cn(
                               'inline-block h-2 w-2 rounded-full',
-                              court?.isCovered ? 'bg-emerald-500' : 'bg-primary/50',
+                              isFacilityDayExclusive ? 'bg-amber-500' : court?.isCovered ? 'bg-emerald-500' : 'bg-primary/50',
                             )}
                           />
-                          {court?.name ?? 'Pickleball court'}
+                          {isFacilityDayExclusive ? 'All courts (Exclusive)' : (court?.name ?? 'Pickleball court')}
                         </div>
                       </TableCell>
                       <TableCell>
                         <p>{format(parseISO(booking.bookingDate), 'MMM d, yyyy')}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatBookingDate(booking.bookingDate, 'EEE')}
+                          {isFacilityDayExclusive ? 'Full day' : formatBookingDate(booking.bookingDate, 'EEE')}
                         </p>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        <p>{formatTimeLabel(booking.startTime)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          to {formatTimeLabel(booking.endTime)}
-                        </p>
+                        {isFacilityDayExclusive ? (
+                          <>
+                            <p>12:00 AM</p>
+                            <p className="text-xs text-muted-foreground">to 11:59 PM</p>
+                          </>
+                        ) : (
+                          <>
+                            <p>{formatTimeLabel(booking.startTime)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              to {formatTimeLabel(booking.endTime)}
+                            </p>
+                          </>
+                        )}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">{booking.players}</TableCell>
                       <TableCell>{formatCurrency(booking.totalAmount)}</TableCell>

@@ -18,11 +18,12 @@ import { getCalendarEvents } from '@/services/resort.service'
 import { PickleballAvailabilityCalendar } from '@/features/pickleball/PickleballAvailabilityCalendar'
 import { ActivityAvailabilityCalendar } from '@/features/activities/ActivityAvailabilityCalendar'
 import { createPickleballBooking, getPickleballBookedSlots } from '@/services/pickleballBooking.service'
+import { getPickleballSettings } from '@/services/pickleballSettings.service'
 import { createActivityBooking, listActivityBookings, listAllActivities, listActivityUnits } from '@/services/activity.service'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
 import type { ActivityBooking, ActivityType } from '@/features/activities/types'
-import { formatTimeLabel as formatPickleballTime, getExclusive24hEnd } from '@/features/pickleball/utils'
+import { formatTimeLabel as formatPickleballTime } from '@/features/pickleball/utils'
 import { usePickleballCourts } from '@/features/pickleball/usePickleballCourts'
 
 type Category = 'resort' | 'pickleball' | 'atv' | 'billiards'
@@ -76,17 +77,16 @@ const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(funct
   const { data: resortEvents = [] } = useQuery({ queryKey: ['calendar-events', monthStart, monthEnd], queryFn: () => getCalendarEvents(monthStart, monthEnd) })
 
   const courts = usePickleballCourts(true)
+  const { data: pickleballSettings } = useQuery({ queryKey: ['pickleball-settings'], queryFn: getPickleballSettings })
+  const pbFacilityExclusiveEnabled = Boolean(pickleballSettings?.exclusiveEnabled && (pickleballSettings?.exclusiveRate24h ?? 0) > 0)
   const [pbIsExclusive, setPbIsExclusive] = useState(false)
   const [courtId, setCourtId] = useState('')
   const [pbDate, setPbDate] = useState('')
   const [pbStart, setPbStart] = useState('13:00')
-  const pbExclusiveEnd = pbDate && pbIsExclusive ? getExclusive24hEnd(pbDate, pbStart) : null
   const [pbEnd, setPbEnd] = useState('')
   const [pbPlayers, setPbPlayers] = useState('2')
-  const selectedCourt = courts.find((c) => c.id === courtId)
-  const pbCourtExclusiveEnabled = Boolean(selectedCourt?.exclusiveEnabled && (selectedCourt?.exclusiveRate24h ?? 0) > 0)
 
-  useEffect(() => { if (!pbCourtExclusiveEnabled && pbIsExclusive) setPbIsExclusive(false) }, [pbCourtExclusiveEnabled, pbIsExclusive])
+  useEffect(() => { if (!pbFacilityExclusiveEnabled && pbIsExclusive) setPbIsExclusive(false) }, [pbFacilityExclusiveEnabled, pbIsExclusive])
 
   const [activityType, setActivityType] = useState<ActivityType>('billiards')
   useEffect(() => { if (category === 'atv') setActivityType('atv'); if (category === 'billiards') setActivityType('billiards') }, [category])
@@ -122,13 +122,13 @@ const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(funct
       checkIn,
       checkOut,
       pbDate,
-      pbStart: pbIsExclusive ? (pbStart || '00:00') : pbStart,
-      pbEnd: pbIsExclusive ? (pbExclusiveEnd?.endTime ?? '23:59') : pbEnd,
+      pbStart: pbIsExclusive ? '00:00' : pbStart,
+      pbEnd: pbIsExclusive ? '23:59' : pbEnd,
       actDate,
       actStart: actIsExclusive ? '00:00' : actStart,
       actDuration: actIsExclusive ? '24' : actDuration,
     })
-  }, [category, customerName, email, checkIn, checkOut, pbDate, pbStart, pbEnd, actDate, actStart, actDuration, onSummaryChange, pbIsExclusive, actIsExclusive, pbExclusiveEnd])
+  }, [category, customerName, email, checkIn, checkOut, pbDate, pbStart, pbEnd, actDate, actStart, actDuration, onSummaryChange, pbIsExclusive, actIsExclusive])
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -142,19 +142,17 @@ const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(funct
         return booking.bookingReference
       }
       if (category === 'pickleball') {
-        if (!courtId || !pbDate) throw new Error('Court and date are required.')
+        if (!pbDate) throw new Error('Date is required.')
         if (pbIsExclusive) {
-          if (!pbCourtExclusiveEnabled) throw new Error('Exclusive 24-hour booking is not enabled for this court.')
-          if (!pbExclusiveEnd) throw new Error('Please select a valid start date and time.')
+          if (!pbFacilityExclusiveEnabled) throw new Error('Exclusive 24-hour booking is not enabled.')
           const booking = await createPickleballBooking({
             customerName: customerName.trim(),
             email: email.trim(),
             contactNumber: phone.trim() || 'N/A',
-            courtId,
             bookingDate: pbDate,
-            endDate: pbExclusiveEnd.endDate,
-            startTime: pbStart,
-            endTime: pbExclusiveEnd.endTime,
+            startTime: '00:00',
+            endTime: '23:59',
+            endDate: pbDate,
             players: Number(pbPlayers) || 2,
             notes: notes.trim(),
             isExclusive: true,
@@ -162,7 +160,7 @@ const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(funct
           await supabase.from('pickleball_bookings').update({ booking_source: 'manual' }).eq('reference', booking.reference)
           return booking.reference
         }
-        if (!pbStart || !pbEnd) throw new Error('Court, date and time are required.')
+        if (!courtId || !pbStart || !pbEnd) throw new Error('Court, date and time are required.')
         const conflict = pickleballOccupied.some((slot) => slot.startTime < pbEnd && slot.endTime > pbStart)
         if (conflict) throw new Error('Selected time slot is already booked. Please choose another time.')
         const booking = await createPickleballBooking({ customerName: customerName.trim(), email: email.trim(), contactNumber: phone.trim() || 'N/A', courtId, bookingDate: pbDate, startTime: pbStart, endTime: pbEnd, players: Number(pbPlayers) || 2, notes: notes.trim() })
@@ -201,7 +199,7 @@ const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(funct
   useImperativeHandle(ref, () => ({ submit: () => mutation.mutate() }), [mutation])
 
   const resetForm = () => {
-    setCustomerName(''); setEmail(''); setPhone(''); setNotes(''); setCheckIn(''); setCheckOut(''); setCourtId(''); setPbDate(''); setPbStart(''); setPbEnd(''); setPbPlayers('2'); setUnitId(''); setActDate(''); setActStart(''); setActDuration('1'); setActPlayers('2'); setPbIsExclusive(false); setActIsExclusive(false)
+    setCustomerName(''); setEmail(''); setPhone(''); setNotes(''); setCheckIn(''); setCheckOut(''); setCourtId(''); setPbDate(''); setPbStart('13:00'); setPbEnd(''); setPbPlayers('2'); setUnitId(''); setActDate(''); setActStart(''); setActDuration('1'); setActPlayers('2'); setPbIsExclusive(false); setActIsExclusive(false)
   }
 
   const LABELS: Record<Category, string> = { resort: 'Resort Accommodation', pickleball: 'Pickleball', atv: 'ATV Rental', billiards: 'Billiards' }
@@ -246,21 +244,25 @@ const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(funct
 
         {category === 'pickleball' && (
           <div className="space-y-5">
-            <div className="space-y-1.5">
-              <Label>Court <span className="text-destructive">*</span></Label>
-              <Select value={courtId} onValueChange={setCourtId}>
-                <SelectTrigger><SelectValue placeholder="Select court" /></SelectTrigger>
-                <SelectContent>{courts.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{c.exclusiveEnabled && (c.exclusiveRate24h ?? 0) > 0 ? ' (Exclusive 24h available)' : ''}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            {pbCourtExclusiveEnabled && (
+            {pbFacilityExclusiveEnabled && (
               <label className="flex items-center gap-2 text-sm font-medium rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <input type="checkbox" checked={pbIsExclusive} onChange={(e) => setPbIsExclusive(e.target.checked)} />
-                Exclusive 24 Hours (reserve this court for the full day)
+                Exclusive 24 Hours (reserve all pickleball courts for the full day)
               </label>
             )}
+
+            {!pbIsExclusive && (
+              <div className="space-y-1.5">
+                <Label>Court <span className="text-destructive">*</span></Label>
+                <Select value={courtId} onValueChange={setCourtId}>
+                  <SelectTrigger><SelectValue placeholder="Select court" /></SelectTrigger>
+                  <SelectContent>{courts.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>{pbIsExclusive ? 'Start date' : 'Date'} <span className="text-destructive">*</span></Label><Popover><PopoverTrigger asChild><Button type="button" variant="outline" className="w-full justify-start font-normal">{pbDate || 'Select date'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><PickleballAvailabilityCalendar compact onDateSelect={(d) => setPbDate(format(d, 'yyyy-MM-dd'))} /></PopoverContent></Popover></div>
+              <div className="space-y-1.5"><Label>Date <span className="text-destructive">*</span></Label><Popover><PopoverTrigger asChild><Button type="button" variant="outline" className="w-full justify-start font-normal">{pbDate || 'Select date'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><PickleballAvailabilityCalendar compact onDateSelect={(d) => setPbDate(format(d, 'yyyy-MM-dd'))} /></PopoverContent></Popover></div>
               {!pbIsExclusive && (
                 <>
                   <div className="space-y-1.5"><Label>Start time <span className="text-destructive">*</span></Label><TimePicker12h value={pbStart} onChange={setPbStart} /></div>
@@ -268,11 +270,7 @@ const AdminManualBookingDialog = forwardRef<{ submit: () => void }, Props>(funct
                 </>
               )}
               {pbIsExclusive && (
-                <>
-                  <div className="space-y-1.5"><Label>Start time <span className="text-destructive">*</span></Label><TimePicker12h value={pbStart} onChange={setPbStart} /></div>
-                  <div className="space-y-1.5"><Label>End date</Label><Input value={pbExclusiveEnd ? pbExclusiveEnd.endDate : '—'} disabled /></div>
-                  <div className="space-y-1.5"><Label>End time</Label><Input value={pbExclusiveEnd ? formatPickleballTime(pbExclusiveEnd.endTime) : '—'} disabled /></div>
-                </>
+                <div className="space-y-1.5"><Label>Duration</Label><Input value="24 hours (full day)" disabled /></div>
               )}
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div className="space-y-1.5"><Label>Players</Label><Input type="number" value={pbPlayers} onChange={(e) => setPbPlayers(e.target.value)} /></div></div>

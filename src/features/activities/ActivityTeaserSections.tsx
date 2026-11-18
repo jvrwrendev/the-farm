@@ -143,9 +143,9 @@ function ActivitySection({
                 {formatTimeLabel(activity.openTime)} – {formatTimeLabel(activity.closeTime)}
               </span>
             )}
-            {!exclusiveEnabled && (
+            {rate > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
-                From {formatCurrency(rate)} / hour
+                Rental from {formatCurrency(rate)} / hour
               </span>
             )}
             {exclusiveEnabled && (

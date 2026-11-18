@@ -1,220 +1,200 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useForm, type Resolver } from 'react-hook-form'
+import { useEffect, useMemo, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addDays, format, startOfDay } from 'date-fns'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useForm, useWatch } from 'react-hook-form'
+import { addDays, format, parse } from 'date-fns'
 import { toast } from 'sonner'
 import { ArrowLeft, CalendarDays, Check, Clock, MapPin, ShieldCheck, Users } from 'lucide-react'
-import { TimePicker12h } from '@/components/ui/time-picker'
 import { PublicLayout } from '@/components/layout/Navbar'
+import { DatePickerField } from '@/features/booking/DatePickerField'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DatePickerField } from '@/features/booking/DatePickerField'
+import { PaymentCheckout } from '@/features/payment/PaymentCheckout'
+import { cn, formatCurrency } from '@/lib/utils'
 import { PickleballAvailability } from './PickleballAvailability'
 import { PickleballBookingSummary } from './PickleballBookingSummary'
 import { PICKLEBALL_SETTINGS } from './mockData'
-import { pickleballBookingSchema, type PickleballBookingFormValues } from './schema'
-import { createPickleballBooking } from '@/services/pickleballBooking.service'
-import { getPickleballAvailability, isPickleballRangeAvailable } from './service'
-import { listPickleballCourts } from '@/services/pickleballCourt.service'
-import type { PickleballBooking, PickleballTimeSlot } from './types'
-import { PaymentCheckout } from '@/features/payment/PaymentCheckout'
-import { queryKeys } from '@/lib/queryKeys'
-import { cn, formatCurrency } from '@/lib/utils'
-import { formatBookingDate, formatTimeLabel, formatTimeRange, getAvailableEndTimes, getDurationHours, getExclusive24hEnd, getPickleballRate } from './utils'
+import { pickleballBookingSchema } from './schema'
+import type { PickleballBooking, PickleballBookingInput } from './types'
+import { usePickleballCourts } from './usePickleballCourts'
+import { formatBookingDate, formatTimeRange, getAvailableEndTimes, getDurationHours, getPickleballRate, isSlotPast } from './utils'
+import { createPickleballBooking, getPickleballBookedSlots } from '@/services/pickleballBooking.service'
+import { getPickleballSettings } from '@/services/pickleballSettings.service'
+import type { z } from 'zod'
 
-const today = startOfDay(new Date())
-const latestDate = addDays(today, PICKLEBALL_SETTINGS.bookingWindowDays)
-const defaultBookingDate = format(addDays(today, 1), 'yyyy-MM-dd')
-const EMPTY_SLOTS: PickleballTimeSlot[] = []
+type PickleballBookingForm = z.infer<typeof pickleballBookingSchema>
 
 export default function PickleballBookingPage() {
-  const { data: courts = [] } = useQuery({ queryKey: queryKeys.pickleballCourts, queryFn: listPickleballCourts })
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const courts = usePickleballCourts()
   const [searchParams] = useSearchParams()
-  const requestedCourtId = searchParams.get('court')
-  const initialCourtId = courts.find((court) => court.id === requestedCourtId)?.id ?? courts[0]?.id ?? ''
+  const defaultBookingDate = format(addDays(new Date(), 1), 'yyyy-MM-dd')
 
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewValues, setReviewValues] = useState<PickleballBookingForm | null>(null)
+  const [createdBooking, setCreatedBooking] = useState<PickleballBooking | null>(null)
+
+  // Facility-wide exclusive (billiards-like flow)
   const [isExclusive, setIsExclusive] = useState(false)
   const [exclusiveDate, setExclusiveDate] = useState(defaultBookingDate)
-  const [exclusiveStartTime, setExclusiveStartTime] = useState('13:00')
-  let exclusiveEndDisplay: { endDate: string; endTime: string }
-  try {
-    exclusiveEndDisplay = getExclusive24hEnd(exclusiveDate, exclusiveStartTime)
-  } catch {
-    exclusiveEndDisplay = { endDate: '', endTime: '' }
-  }
   const [exclusiveName, setExclusiveName] = useState('')
   const [exclusiveEmail, setExclusiveEmail] = useState('')
   const [exclusiveContact, setExclusiveContact] = useState('')
   const [exclusivePlayers, setExclusivePlayers] = useState(2)
   const [exclusiveNotes, setExclusiveNotes] = useState('')
 
-  const [reviewOpen, setReviewOpen] = useState(false)
-  const [reviewValues, setReviewValues] = useState<PickleballBookingFormValues | null>(null)
-  const [createdBooking, setCreatedBooking] = useState<PickleballBooking | null>(null)
-  const justBookedRef = useRef(false)
+  const { data: facilitySettings } = useQuery({
+    queryKey: ['pickleball-settings'],
+    queryFn: getPickleballSettings,
+  })
+  const exclusiveEnabled = Boolean(facilitySettings?.exclusiveEnabled && (facilitySettings?.exclusiveRate24h ?? 0) > 0)
+  const exclusiveRate = Number(facilitySettings?.exclusiveRate24h ?? 0)
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<PickleballBookingFormValues>({
-    resolver: zodResolver(pickleballBookingSchema) as Resolver<PickleballBookingFormValues>,
-    defaultValues: { customerName: '', email: '', contactNumber: '', courtId: initialCourtId, bookingDate: defaultBookingDate, startTime: '', endTime: '', players: 2, notes: '' },
+  useEffect(() => {
+    if (!exclusiveEnabled && isExclusive) setIsExclusive(false)
+  }, [exclusiveEnabled, isExclusive])
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const latestDate = addDays(today, PICKLEBALL_SETTINGS.bookingWindowDays)
+
+  const { control, handleSubmit, setValue, register, formState: { errors } } = useForm<PickleballBookingForm>({
+    resolver: zodResolver(pickleballBookingSchema),
+    defaultValues: {
+      customerName: '',
+      email: '',
+      contactNumber: '',
+      courtId: '',
+      bookingDate: defaultBookingDate,
+      startTime: '',
+      endTime: '',
+      players: 2,
+      notes: '',
+    },
   })
 
-  const courtId = watch('courtId')
-  const bookingDate = watch('bookingDate')
-  const startTime = watch('startTime')
-  const endTime = watch('endTime')
-  const players = Number(watch('players')) || 0
-
-  const court = courts.find((c) => c.id === courtId)
-  const selectedCourtExclusiveEnabled = Boolean(court?.exclusiveEnabled && (court?.exclusiveRate24h ?? 0) > 0)
-  const durationHours = getDurationHours(startTime, endTime)
-  const regularTotal = getPickleballRate(court, bookingDate) * durationHours
-  const total = isExclusive ? Number(court?.exclusiveRate24h ?? 0) : regularTotal
+  const formValues = useWatch({ control })
+  const courtId = formValues.courtId ?? ''
+  const bookingDate = formValues.bookingDate ?? ''
+  const startTime = formValues.startTime ?? ''
+  const endTime = formValues.endTime ?? ''
+  const players = Number(formValues.players ?? 0)
 
   useEffect(() => {
-    if (!courtId && initialCourtId) setValue('courtId', initialCourtId, { shouldValidate: true })
-  }, [courtId, initialCourtId, setValue])
+    const requestedCourt = searchParams.get('court')
+    if (requestedCourt && courts.some((c) => c.id === requestedCourt)) {
+      setValue('courtId', requestedCourt, { shouldValidate: false })
+    }
+  }, [searchParams, courts, setValue])
 
-  useEffect(() => {
-    if (!selectedCourtExclusiveEnabled && isExclusive) setIsExclusive(false)
-  }, [selectedCourtExclusiveEnabled, isExclusive])
+  const court = useMemo(() => courts.find((c) => c.id === courtId), [courts, courtId])
 
   const availabilityQuery = useQuery({
-    queryKey: queryKeys.pickleballAvailability(courtId, bookingDate),
-    queryFn: () => getPickleballAvailability(court, bookingDate),
+    queryKey: ['pickleball-booked-slots', courtId, bookingDate],
+    queryFn: () => getPickleballBookedSlots(courtId, bookingDate),
     enabled: Boolean(courtId && bookingDate && !isExclusive),
-    staleTime: 0,
   })
 
-  const slots = availabilityQuery.data ?? EMPTY_SLOTS
+  const bookedSlots = availabilityQuery.data ?? []
+  const durationHours = getDurationHours(startTime, endTime)
+  const regularTotal = getPickleballRate(court, bookingDate) * durationHours
+  const total = isExclusive ? exclusiveRate : regularTotal
+
+  const slots = useMemo(() => {
+    if (!bookingDate) return []
+    const now = new Date()
+    const todayStr = format(now, 'yyyy-MM-dd')
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    const open = parse(PICKLEBALL_SETTINGS.openTime, 'HH:mm', new Date())
+    const close = parse(PICKLEBALL_SETTINGS.closeTime, 'HH:mm', new Date())
+    const interval = PICKLEBALL_SETTINGS.slotMinutes
+    const result: Array<{ startTime: string; endTime: string; status: 'available' | 'reserved' | 'past' }> = []
+    let cursor = open
+    while (cursor < close) {
+      const s = format(cursor, 'HH:mm')
+      const e = format(new Date(cursor.getTime() + interval * 60000), 'HH:mm')
+      const [h, m] = s.split(':').map(Number)
+      const slotMinutes = h * 60 + m
+      const isPast = bookingDate < todayStr || (bookingDate === todayStr && slotMinutes <= nowMinutes)
+      const isBooked = bookedSlots.some((b) => b.startTime < e && b.endTime > s)
+      result.push({ startTime: s, endTime: e, status: isPast ? 'past' : isBooked ? 'reserved' : 'available' })
+      cursor = new Date(cursor.getTime() + interval * 60000)
+    }
+    return result
+  }, [bookingDate, bookedSlots])
+
   const endOptions = useMemo(() => (startTime ? getAvailableEndTimes(slots, startTime) : []), [slots, startTime])
 
-  useEffect(() => { setValue('startTime', '', { shouldValidate: false }); setValue('endTime', '', { shouldValidate: false }) }, [courtId, bookingDate, setValue])
-  useEffect(() => { if (isExclusive) { setValue('startTime', '', { shouldValidate: false }); setValue('endTime', '', { shouldValidate: false }) } }, [isExclusive, setValue])
-
   useEffect(() => {
-    if (!startTime || !availabilityQuery.data) return
-    const selectedSlot = availabilityQuery.data.find((slot) => slot.startTime === startTime)
-    if (selectedSlot && selectedSlot.status !== 'available') {
-      setValue('startTime', '', { shouldValidate: false })
+    if (!endTime || !startTime) return
+    if (!endOptions.some((o) => o.value === endTime)) {
       setValue('endTime', '', { shouldValidate: false })
-      if (!justBookedRef.current) toast.error('That time slot was just reserved. Please choose another time.')
-      return
     }
-    if (endTime && endOptions.length > 0 && !endOptions.some((option) => option.value === endTime)) {
-      setValue('endTime', endOptions[0].value, { shouldValidate: true })
-    }
-  }, [availabilityQuery.data, startTime, endTime, endOptions, setValue])
+  }, [startTime, endOptions, endTime, setValue])
 
-  type ExclusiveMutationInput = {
-    isExclusive: true
-    courtId: string
-    customerName: string
-    email: string
-    contactNumber: string
-    bookingDate: string
-    startTime: string
-    players: number
-    notes: string
+  const handleStartTimeChange = (value: string) => {
+    setValue('startTime', value, { shouldValidate: true, shouldDirty: true })
+    setValue('endTime', '', { shouldValidate: false })
+  }
+
+  const handleSlotSelect = (slot: { startTime: string; endTime: string }) => {
+    handleStartTimeChange(slot.startTime)
+    const options = getAvailableEndTimes(slots, slot.startTime)
+    if (options.length > 0) {
+      setValue('endTime', options[0].value, { shouldValidate: true, shouldDirty: true })
+    }
   }
 
   const mutation = useMutation({
-    mutationFn: async (values: ExclusiveMutationInput | PickleballBookingFormValues) => {
-      if ('isExclusive' in values && values.isExclusive) {
-        const computedEnd = getExclusive24hEnd(values.bookingDate, values.startTime)
-        return createPickleballBooking({
-          customerName: values.customerName,
-          email: values.email,
-          contactNumber: values.contactNumber,
-          courtId: values.courtId,
-          bookingDate: values.bookingDate,
-          endDate: computedEnd.endDate,
-          startTime: values.startTime,
-          endTime: computedEnd.endTime,
-          players: Number(values.players) || 2,
-          notes: values.notes,
-          isExclusive: true,
-        } as any)
-      }
-      const v = values as PickleballBookingFormValues
-      const now = new Date()
-      const todayStr = format(now, 'yyyy-MM-dd')
-      if (v.bookingDate === todayStr) {
-        const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
-        if (toMin(v.startTime) < now.getHours() * 60 + now.getMinutes()) throw new Error('The selected start time has already passed.')
-      }
-      return createPickleballBooking({ customerName: v.customerName, email: v.email, contactNumber: v.contactNumber, courtId: v.courtId, bookingDate: v.bookingDate, startTime: v.startTime, endTime: v.endTime, players: Number(v.players), notes: v.notes ?? '' })
-    },
+    mutationFn: async (input: PickleballBookingInput) => createPickleballBooking(input),
     onSuccess: (booking) => {
-      justBookedRef.current = true
-      queryClient.invalidateQueries({ queryKey: ['pickleball'] })
-      toast.success(`Court reserved · ${booking.reference}`)
-      setReviewOpen(false)
       setCreatedBooking(booking)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setReviewOpen(false)
+      setReviewValues(null)
+      queryClient.invalidateQueries({ queryKey: ['pickleball'] })
+      queryClient.invalidateQueries({ queryKey: ['pickleball-settings'] })
+      toast.success('Reservation submitted!')
     },
-    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : 'Unable to reserve the court.'),
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to create booking.')
+    },
   })
 
-  const handleSlotSelect = (slot: PickleballTimeSlot) => {
-    if (slot.status !== 'available') return
-    setValue('startTime', slot.startTime, { shouldValidate: true, shouldDirty: true })
-    setValue('endTime', slot.endTime, { shouldValidate: true, shouldDirty: true })
-  }
-
-  const handleStartTimeChange = (value: string) => {
-    const options = getAvailableEndTimes(slots, value)
-    setValue('startTime', value, { shouldValidate: true, shouldDirty: true })
-    setValue('endTime', options[0]?.value ?? '', { shouldValidate: true, shouldDirty: true })
-  }
-
-  const handleReview = async (values: PickleballBookingFormValues) => {
+  const handleReview = (values: PickleballBookingForm) => {
     if (isExclusive) return
-    const selectedCourt = courts.find((c) => c.id === values.courtId)
-    if (!selectedCourt) { toast.error('Please select a valid court.'); return }
-    const available = await isPickleballRangeAvailable(values.courtId, values.bookingDate, values.startTime, values.endTime)
-    if (!available) { toast.error('That time slot is no longer available. Please choose another time.'); availabilityQuery.refetch(); return }
+    if (isSlotPast(values.bookingDate, values.startTime)) {
+      toast.error('That time slot has already passed. Please pick a later time.')
+      return
+    }
     setReviewValues(values)
     setReviewOpen(true)
   }
 
-  const handleExclusiveSubmit = async (e: React.FormEvent) => {
+  const handleExclusiveSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCourtExclusiveEnabled || !courtId) { toast.error('Please select a court that supports exclusive booking.'); return }
-    if (!exclusiveName.trim() || !exclusiveEmail.trim() || !exclusiveContact.trim() || !exclusiveDate) { toast.error('Please complete your details and select a date.'); return }
-    if (!exclusiveStartTime) { toast.error('Please select a start time.'); return }
-    try {
-      getExclusive24hEnd(exclusiveDate, exclusiveStartTime)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Invalid start date or time.')
+    if (!exclusiveEnabled) { toast.error('Exclusive 24-hour booking is not enabled.'); return }
+    if (!exclusiveDate) { toast.error('Please select a date.'); return }
+    if (!exclusiveName.trim() || !exclusiveEmail.trim() || !exclusiveContact.trim()) {
+      toast.error('Please complete your details.')
       return
     }
-    const now = new Date()
-    const todayStr = format(now, 'yyyy-MM-dd')
-    if (exclusiveDate === todayStr) {
-      const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
-      if (toMin(exclusiveStartTime) <= now.getHours() * 60 + now.getMinutes()) {
-        toast.error('The selected start time has already passed.')
-        return
-      }
-    }
     mutation.mutate({
-      isExclusive: true,
-      courtId,
       customerName: exclusiveName.trim(),
       email: exclusiveEmail.trim(),
       contactNumber: exclusiveContact.trim(),
       bookingDate: exclusiveDate,
-      startTime: exclusiveStartTime,
+      startTime: '00:00',
+      endTime: '23:59',
+      endDate: exclusiveDate,
       players: Number(exclusivePlayers) || 2,
-      notes: exclusiveNotes,
+      notes: exclusiveNotes.trim(),
+      isExclusive: true,
     })
   }
 
@@ -231,7 +211,9 @@ export default function PickleballBookingPage() {
           <div className="mx-auto mb-8 max-w-2xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Step 2 of 2</span>
             <h1 className="font-display mt-4 text-3xl font-bold sm:text-4xl">Complete your down payment</h1>
-            <p className="mt-3 text-muted-foreground">Reservation <span className="font-mono font-semibold text-foreground">{createdBooking.reference}</span> created. Pay 50% now to secure your court.</p>
+            <p className="mt-3 text-muted-foreground">
+              Reservation <span className="font-mono font-semibold text-foreground">{createdBooking.reference}</span> created. Pay 50% now to secure your {createdBooking.isExclusive ? 'exclusive facility booking' : 'court'}.
+            </p>
           </div>
           <PaymentCheckout bookingType="pickleball" bookingReference={createdBooking.reference} totalAmount={createdBooking.totalAmount} onSubmitted={() => navigate(`/pickleball/confirmation/${createdBooking.reference}`)} />
         </div>
@@ -247,20 +229,22 @@ export default function PickleballBookingPage() {
           <div className="mx-auto mt-5 max-w-2xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Reserve a Court</span>
             <h1 className="font-display mt-4 text-3xl font-bold sm:text-4xl lg:text-5xl">Book your pickleball session</h1>
-            <p className="mt-4 text-muted-foreground">Choose a court and time, or reserve a specific court exclusively for 24 hours (if available).</p>
+            <p className="mt-4 text-muted-foreground">
+              Choose a court and time{exclusiveEnabled ? ', or reserve the entire facility exclusively for 24 hours' : ''}.
+            </p>
           </div>
         </div>
 
-        {selectedCourtExclusiveEnabled && (
+        {exclusiveEnabled && (
           <Card className="mb-6 border-primary/30 bg-primary/5">
             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold">Exclusive 24 Hours — {court?.name}</p>
-                <p className="text-sm text-muted-foreground">Reserve this specific court exclusively for a full day. Rate: {formatCurrency(Number(court?.exclusiveRate24h ?? 0))} / 24 hrs</p>
+                <p className="font-semibold">Exclusive 24 Hours (All Pickleball Courts)</p>
+                <p className="text-sm text-muted-foreground">Reserve the entire pickleball facility for a full day. Rate: {formatCurrency(exclusiveRate)} / 24 hrs</p>
               </div>
               <label className="inline-flex items-center gap-2 text-sm font-medium">
-                <input type="checkbox" checked={isExclusive} onChange={(e) => { setIsExclusive(e.target.checked); if (e.target.checked) { setValue('startTime', '', { shouldValidate: false }); setValue('endTime', '', { shouldValidate: false }) } }} className="h-4 w-4" />
-                Book this court exclusively
+                <input type="checkbox" checked={isExclusive} onChange={(e) => setIsExclusive(e.target.checked)} className="h-4 w-4" />
+                Book exclusively
               </label>
             </CardContent>
           </Card>
@@ -271,28 +255,13 @@ export default function PickleballBookingPage() {
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
               <div className="space-y-6 lg:col-span-2">
                 <Card>
-                  <CardHeader><CardTitle className="font-display text-xl">Court-exclusive 24-hour reservation</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className="font-display text-xl">Exclusive 24-hour reservation</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">This reserves <strong>{court?.name}</strong> exclusively for exactly 24 hours from the selected start time. Other courts remain available.</p>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Start date</Label>
-                        <DatePickerField value={exclusiveDate} onChange={setExclusiveDate} disabledDate={(date) => date < today || date > latestDate} placeholder="Select date" ariaLabel="Pick exclusive date" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Start time</Label>
-                        <TimePicker12h value={exclusiveStartTime} onChange={setExclusiveStartTime} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>End date</Label>
-                        <Input value={exclusiveEndDisplay.endDate ? formatBookingDate(exclusiveEndDisplay.endDate) : '—'} disabled />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>End time</Label>
-                        <Input value={exclusiveEndDisplay.endTime ? formatTimeLabel(exclusiveEndDisplay.endTime) : '—'} disabled />
-                      </div>
+                    <p className="text-sm text-muted-foreground">This reserves <strong>all pickleball courts</strong> for the selected date (full day).</p>
+                    <div className="max-w-sm space-y-2">
+                      <Label>Date</Label>
+                      <DatePickerField value={exclusiveDate} onChange={setExclusiveDate} disabledDate={(date: Date) => date < today || date > latestDate} placeholder="Select date" ariaLabel="Pick exclusive date" />
                     </div>
-                    <p className="text-xs text-muted-foreground">End date and time are automatically calculated and cannot be edited.</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -302,27 +271,23 @@ export default function PickleballBookingPage() {
                       <div className="space-y-2 sm:col-span-2"><Label>Full name</Label><Input value={exclusiveName} onChange={(e) => setExclusiveName(e.target.value)} placeholder="Juan Dela Cruz" /></div>
                       <div className="space-y-2"><Label>Email</Label><Input type="email" value={exclusiveEmail} onChange={(e) => setExclusiveEmail(e.target.value)} placeholder="you@example.com" /></div>
                       <div className="space-y-2"><Label>Contact number</Label><Input value={exclusiveContact} onChange={(e) => setExclusiveContact(e.target.value)} placeholder="+63 9XX XXX XXXX" /></div>
-                      <div className="space-y-2"><Label>Number of players</Label><Input type="number" min={1} value={exclusivePlayers} onChange={(e) => setExclusivePlayers(Number(e.target.value))} /></div>
+                      <div className="space-y-2"><Label>Participants</Label><Input type="number" min={1} value={exclusivePlayers} onChange={(e) => setExclusivePlayers(Number(e.target.value))} /></div>
                       <div className="space-y-2 sm:col-span-2"><Label>Notes (optional)</Label><Textarea value={exclusiveNotes} onChange={(e) => setExclusiveNotes(e.target.value)} /></div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
               <div className="lg:col-span-1">
-                <div className="lg:sticky lg:top-28">
-                  <Card className="border-border/70">
-                    <CardHeader><CardTitle className="font-display text-xl">Booking summary</CardTitle></CardHeader>
-                    <CardContent className="space-y-3 text-sm">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="font-medium">Court Exclusive 24 Hours</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Court</span><span className="font-medium">{court?.name ?? '—'}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Start</span><span className="font-medium">{exclusiveDate ? `${formatBookingDate(exclusiveDate)} · ${formatTimeLabel(exclusiveStartTime)}` : '—'}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">End</span><span className="font-medium">{exclusiveEndDisplay.endDate ? `${formatBookingDate(exclusiveEndDisplay.endDate)} · ${formatTimeLabel(exclusiveEndDisplay.endTime)}` : '—'}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Duration</span><span className="font-medium">24 hours</span></div>
-                      <div className="border-t pt-3 flex justify-between text-base font-semibold"><span>Total</span><span>{formatCurrency(total)}</span></div>
-                      <Button type="submit" size="lg" className="w-full rounded-full" disabled={mutation.isPending}>{mutation.isPending ? 'Submitting…' : 'Reserve exclusively'}</Button>
-                    </CardContent>
-                  </Card>
-                </div>
+                <Card className="lg:sticky lg:top-28">
+                  <CardHeader><CardTitle className="font-display text-lg">Booking summary</CardTitle></CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="font-medium">Exclusive 24 Hours</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Facility</span><span className="font-medium">All pickleball courts</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="font-medium">{exclusiveDate ? formatBookingDate(exclusiveDate, 'MMM d, yyyy') : '—'}</span></div>
+                    <div className="border-t pt-3 flex justify-between text-base font-semibold"><span>Total</span><span>{formatCurrency(exclusiveRate)}</span></div>
+                    <Button type="submit" size="lg" className="w-full rounded-full" disabled={mutation.isPending}>{mutation.isPending ? 'Submitting…' : 'Reserve exclusively'}</Button>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </form>
@@ -333,7 +298,7 @@ export default function PickleballBookingPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="font-display text-xl">Choose a court</CardTitle>
-                    <p className="text-sm text-muted-foreground">Select a court to see availability and pricing. Courts with exclusive 24h enabled can be reserved for the full day.</p>
+                    <p className="text-sm text-muted-foreground">Select a court to see availability and pricing.</p>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -348,7 +313,6 @@ export default function PickleballBookingPage() {
                             <div className="p-3">
                               <p className="text-sm font-semibold text-foreground">{option.name}</p>
                               <p className="mt-0.5 text-xs text-muted-foreground">{formatCurrency(option.hourlyRate)} / hour · up to {option.maxPlayers}</p>
-                              {option.exclusiveEnabled && (option.exclusiveRate24h ?? 0) > 0 && <p className="mt-1 text-xs font-medium text-primary">Exclusive 24h: {formatCurrency(Number(option.exclusiveRate24h))}</p>}
                             </div>
                           </button>
                         )
@@ -373,12 +337,16 @@ export default function PickleballBookingPage() {
                   <CardContent className="space-y-5">
                     <div className="max-w-sm space-y-2">
                       <Label>Booking date</Label>
-                      <DatePickerField value={bookingDate} onChange={(value) => setValue('bookingDate', value, { shouldValidate: true, shouldDirty: true })} disabledDate={(date) => date < today || date > latestDate} placeholder="Select a booking date" ariaLabel="Pick a pickleball booking date" />
+                      <DatePickerField value={bookingDate} onChange={(value: string) => { setValue('bookingDate', value, { shouldValidate: true, shouldDirty: true }); setValue('startTime', '', { shouldValidate: false }); setValue('endTime', '', { shouldValidate: false }) }} disabledDate={(date: Date) => date < today || date > latestDate} placeholder="Select a booking date" ariaLabel="Pick a pickleball booking date" />
                       {errors.bookingDate?.message && <p className="text-sm text-destructive">{errors.bookingDate.message}</p>}
-                      <p className="text-xs text-muted-foreground">Open daily {formatTimeLabel(PICKLEBALL_SETTINGS.openTime)} – {formatTimeLabel(PICKLEBALL_SETTINGS.closeTime)}.</p>
                     </div>
-                    {!isExclusive && (
+
+                    {courtId && bookingDate ? (
                       <PickleballAvailability slots={slots} isLoading={availabilityQuery.isLoading} isError={availabilityQuery.isError} onRetry={() => availabilityQuery.refetch()} startTime={startTime} endTime={endTime} onStartTimeChange={(value) => { if (value) handleStartTimeChange(value) }} onEndTimeChange={(value) => { if (!value) return; setValue('endTime', value, { shouldValidate: true, shouldDirty: true }) }} onSlotSelect={handleSlotSelect} />
+                    ) : (
+                      <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                        Select a court and date to view available time slots.
+                      </div>
                     )}
                     {(errors.startTime?.message || errors.endTime?.message) && (
                       <div className="space-y-1">

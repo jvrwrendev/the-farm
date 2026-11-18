@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { ActivityAvailabilityCalendar } from '@/features/activities/ActivityAvailabilityCalendar'
 import { PickleballAvailabilityCalendar } from '@/features/pickleball/PickleballAvailabilityCalendar'
 import { listActivities } from '@/services/activity.service'
-import { listPickleballCourts } from '@/services/pickleballCourt.service'
+import { getPickleballSettings } from '@/services/pickleballSettings.service'
 import { getCalendarEvents } from '@/services/resort.service'
 import type { CalendarEvent } from '@/types'
 import { formatCurrency } from '@/lib/utils'
@@ -26,11 +26,13 @@ export function AvailabilitySection() {
     queryKey: ['calendar-events', monthStart, monthEnd],
     queryFn: () => getCalendarEvents(monthStart, monthEnd),
   })
-  const { data: pickleballCourts = [] } = useQuery({
-    queryKey: ['pickleball-courts'],
-    queryFn: listPickleballCourts,
+  const { data: pickleballSettings } = useQuery({
+    queryKey: ['pickleball-settings'],
+    queryFn: getPickleballSettings,
   })
-  const exclusiveCourts = pickleballCourts.filter((c) => c.exclusiveEnabled && (c.exclusiveRate24h ?? 0) > 0)
+  const pickleballExclusiveEnabled = Boolean(
+    pickleballSettings?.exclusiveEnabled && (pickleballSettings?.exclusiveRate24h ?? 0) > 0,
+  )
   const { data: billiardsActivities = [] } = useQuery({
     queryKey: ['activities', 'billiards'],
     queryFn: () => listActivities('billiards'),
@@ -155,15 +157,31 @@ export function AvailabilitySection() {
             </TabsContent>
 
             <TabsContent value="other" className="mt-6">
-              {billiardsExclusive && (
-                <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-semibold text-foreground">Billiards Exclusive 24 Hours</p>
-                    <p className="text-sm text-muted-foreground">Reserve all billiard tables for a full day · {formatCurrency(Number(billiardsExclusive.exclusiveRate24h ?? 0))} / day</p>
+              {(() => {
+                const billiards = billiardsActivities[0]
+                const billiardsHourlyRate = billiards
+                  ? (billiards.weekdayRate || billiards.hourlyRate || 0)
+                  : 0
+                if (!billiardsExclusive && !(billiardsHourlyRate > 0)) return null
+                return (
+                  <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {billiardsExclusive ? 'Billiards Exclusive 24 Hours' : 'Billiards'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {billiardsExclusive
+                          ? `Reserve all billiard tables for a full day · ${formatCurrency(Number(billiardsExclusive.exclusiveRate24h ?? 0))} / day`
+                          : 'Hourly table rental available.'}
+                        {billiardsHourlyRate > 0
+                          ? `${billiardsExclusive ? ' · ' : ' '}Rental from ${formatCurrency(billiardsHourlyRate)} / hour`
+                          : ''}
+                      </p>
+                    </div>
+                    <Button asChild className="rounded-full"><Link to="/billiards/book">{billiardsExclusive ? 'Book exclusively' : 'Book a table'}</Link></Button>
                   </div>
-                  <Button asChild className="rounded-full"><Link to="/billiards/book">Book exclusively</Link></Button>
-                </div>
-              )}
+                )
+              })()}
               <p className="mb-4 text-center text-sm text-muted-foreground">
                 Pick a date to see hourly Billiards and ATV availability. Fully booked and reserved
                 slots are highlighted.
@@ -172,15 +190,15 @@ export function AvailabilitySection() {
             </TabsContent>
 
             <TabsContent value="pickleball" className="mt-6">
-              {exclusiveCourts.length > 0 && (
+              {pickleballExclusiveEnabled && (
                 <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold text-foreground">Court Exclusive 24 Hours</p>
+                    <p className="font-semibold text-foreground">Pickleball Exclusive 24 Hours</p>
                     <p className="text-sm text-muted-foreground">
-                      Select a court on the booking page to reserve it exclusively for a full day. Available for: {exclusiveCourts.map((c) => `${c.name} (${formatCurrency(Number(c.exclusiveRate24h ?? 0))})`).join(', ')}
+                      Reserve all pickleball courts for a full day · {formatCurrency(Number(pickleballSettings?.exclusiveRate24h ?? 0))} / day
                     </p>
                   </div>
-                  <Button asChild className="rounded-full"><Link to="/pickleball/book">Book a court</Link></Button>
+                  <Button asChild className="rounded-full"><Link to="/pickleball/book">Book exclusively</Link></Button>
                 </div>
               )}
               <p className="mb-4 text-center text-sm text-muted-foreground">

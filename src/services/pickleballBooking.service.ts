@@ -113,18 +113,19 @@ export async function getPickleballBookingByReference(
 export async function createPickleballBooking(
   input: PickleballBookingInput,
 ): Promise<PickleballBooking> {
+  const isExclusive = Boolean(input.isExclusive)
   const { data, error } = await supabase.rpc('create_pickleball_booking', {
-    p_court_id: input.courtId,
+    p_court_id: input.courtId ?? null,
     p_customer_name: input.customerName.trim(),
     p_email: input.email.trim(),
     p_contact_number: input.contactNumber.trim(),
     p_booking_date: input.bookingDate,
-    p_start_time: input.startTime ?? '00:00',
-    p_end_time: input.endTime ?? input.startTime ?? '23:59',
+    p_start_time: isExclusive ? '00:00' : (input.startTime ?? '00:00'),
+    p_end_time: isExclusive ? '23:59' : (input.endTime ?? input.startTime ?? '23:59'),
     p_players: Number(input.players),
     p_notes: input.notes?.trim() || null,
-    p_is_exclusive: Boolean(input.isExclusive),
-    p_end_date: input.endDate ?? null,
+    p_is_exclusive: isExclusive,
+    p_end_date: isExclusive ? (input.endDate ?? input.bookingDate) : (input.endDate ?? input.bookingDate),
   })
   if (error) throw new Error(mapPostgrestError(error))
   if (!data) throw new Error('Unable to retrieve the new reservation.')

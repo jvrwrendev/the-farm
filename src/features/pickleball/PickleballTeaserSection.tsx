@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CalendarCheck2, Clock, Trophy, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,11 +9,19 @@ import { usePickleballCourts } from './usePickleballCourts'
 import { formatCurrency } from '@/lib/utils'
 import { formatTimeLabel } from './utils'
 import { scrollToLandingSection } from '@/lib/scroll'
+import { getPickleballSettings } from '@/services/pickleballSettings.service'
 
 export function PickleballTeaserSection() {
   const courts = usePickleballCourts()
-  const exclusiveCourts = courts.filter((c) => c.exclusiveEnabled && (c.exclusiveRate24h ?? 0) > 0)
-  const lowestExclusiveRate = exclusiveCourts.length > 0 ? Math.min(...exclusiveCourts.map((c) => Number(c.exclusiveRate24h ?? 0))) : 0
+  const { data: facilitySettings } = useQuery({
+    queryKey: ['pickleball-settings'],
+    queryFn: getPickleballSettings,
+  })
+  const exclusiveEnabled = Boolean(
+    facilitySettings?.exclusiveEnabled && (facilitySettings?.exclusiveRate24h ?? 0) > 0,
+  )
+  const exclusiveRate = Number(facilitySettings?.exclusiveRate24h ?? 0)
+
   const lowestRate = courts.length
     ? Math.min(...courts.map((court) => court.weekdayRate || court.hourlyRate))
     : 0
@@ -67,7 +76,7 @@ export function PickleballTeaserSection() {
             Pickleball, right on the farm.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-primary-foreground/80 sm:text-lg">
-            Stay for the quiet, play for the rally. Our three courts are ready for casual doubles,
+            Stay for the quiet, play for the rally. Our courts are ready for casual doubles,
             family matches, and friendly tournaments — just steps from the gardens.
           </p>
 
@@ -85,9 +94,9 @@ export function PickleballTeaserSection() {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1.5">
               From {formatCurrency(lowestRate)} / hour
             </span>
-            {exclusiveCourts.length > 0 && (
+            {exclusiveEnabled && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/20 px-3 py-1.5 text-amber-50">
-                Court exclusive 24 hrs from {formatCurrency(lowestExclusiveRate)} / day
+                Exclusive 24 hrs · {formatCurrency(exclusiveRate)} / day
               </span>
             )}
           </div>

@@ -109,8 +109,15 @@ export default function AdminPickleballDetailsPage() {
   }
 
   const court = courts.find((item) => item.id === booking.courtId)
-  const courtName = court?.name ?? 'Pickleball court'
-  const courtType = court?.isCovered ? 'Covered court' : 'Outdoor court'
+  const isFacilityDayExclusive =
+    Boolean(booking.isExclusive) &&
+    booking.endDate === booking.bookingDate &&
+    booking.startTime === '00:00' &&
+    booking.endTime === '23:59'
+  const courtName = isFacilityDayExclusive ? 'All pickleball courts' : (court?.name ?? 'Pickleball court')
+  const courtType = isFacilityDayExclusive
+    ? 'Entire facility'
+    : (court?.isCovered ? 'Covered court' : 'Outdoor court')
 
   return (
     <div className="space-y-6">
@@ -157,19 +164,23 @@ export default function AdminPickleballDetailsPage() {
               <InfoRow icon={MapPin} label="Court" value={`${courtName} · ${courtType}`} />
               <InfoRow
                 icon={CalendarDays}
-                label={booking.isExclusive ? 'Booking dates' : 'Booking date'}
+                label={booking.isExclusive && !isFacilityDayExclusive ? 'Booking dates' : 'Booking date'}
                 value={
-                  booking.isExclusive
-                    ? `${formatBookingDate(booking.bookingDate, 'EEE, MMM d')} – ${formatBookingDate(booking.endDate, 'EEE, MMM d, yyyy')}`
-                    : formatBookingDate(booking.bookingDate, 'EEEE, MMM d, yyyy')
+                  isFacilityDayExclusive
+                    ? formatBookingDate(booking.bookingDate, 'EEEE, MMM d, yyyy')
+                    : booking.isExclusive
+                      ? `${formatBookingDate(booking.bookingDate, 'EEE, MMM d')} – ${formatBookingDate(booking.endDate, 'EEE, MMM d, yyyy')}`
+                      : formatBookingDate(booking.bookingDate, 'EEEE, MMM d, yyyy')
                 }
               />
               <InfoRow
                 icon={Clock}
                 label="Time"
-                value={`${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(
-                  booking.endTime,
-                )}${booking.isExclusive ? ' (+1 day)' : ''}`}
+                value={
+                  isFacilityDayExclusive
+                    ? '12:00 AM – 11:59 PM (Full day)'
+                    : `${formatTimeLabel(booking.startTime)} – ${formatTimeLabel(booking.endTime)}${booking.isExclusive ? ' (+1 day)' : ''}`
+                }
               />
               <InfoRow
                 icon={Clock}
@@ -184,7 +195,13 @@ export default function AdminPickleballDetailsPage() {
               <InfoRow
                 icon={Trophy}
                 label="Booking type"
-                value="Pickleball court reservation"
+                value={
+                  isFacilityDayExclusive
+                    ? 'Pickleball facility-exclusive reservation (24 hours)'
+                    : booking.isExclusive
+                      ? 'Pickleball court-exclusive reservation (24 hours)'
+                      : 'Pickleball court reservation'
+                }
               />
             </CardContent>
           </Card>
